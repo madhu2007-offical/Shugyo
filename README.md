@@ -1,12 +1,12 @@
 # 修行 SHUGYO — DBMS/SQL Mastery Tracker
 
-SHUGYO is a database-backed, single-user SQL and DBMS mastery tracker. It allows you to track your learning progress, practice SQL queries in an in-browser sandbox, take theory quizzes, and dynamically unlock trophies as you complete your goals.
+SHUGYO is a database-backed, single-user SQL and DBMS mastery tracker. It allows you to track your learning progress, practice SQL queries in an in-browser sandbox, take theory quizzes, and dynamically unlock achievements as you complete your goals.
 
 ## Technology Stack
 - **Frontend:** React + Vite + React Router (SPA)
 - **Styling:** Vanilla CSS (cyberpunk dark-theme and glassmorphic panels)
 - **Backend/DB/Auth:** Supabase (Postgres + Supabase Auth)
-- **Local Sandbox:** SQLite WASM (via `sql.js` CDN)
+- **Local Sandbox:** Alasql SQL database engine (via CDN)
 - **Hosting Target:** Netlify
 
 ---

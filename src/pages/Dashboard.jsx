@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase, logActivity } from '../supabaseClient';
 import { calculateStreak } from '../utils/streakCalculator';
-import { evaluateTrophies } from '../utils/trophyEvaluator';
+import { evaluateAchievements } from '../utils/trophyEvaluator';
 import { QUOTES, PRESSURE_QUOTES, TROPHIES } from '../data/trackerData';
-import { BookOpen, CheckSquare, Trophy } from 'lucide-react';
+import { BookOpen, CheckSquare, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function Dashboard() {
@@ -152,15 +152,15 @@ export function Dashboard() {
     prevDate = d;
   });
 
-  // Evaluate Trophies
-  const trophyStatus = evaluateTrophies({
+  // Evaluate Achievements
+  const achievementStatus = evaluateAchievements({
     progress,
     checklistItems: checklist,
     questionGrades: grades,
     testAttempts,
     streakCount
   });
-  const unlockedTrophyCount = Object.values(trophyStatus).filter(Boolean).length;
+  const unlockedAchievementCount = Object.values(achievementStatus).filter(Boolean).length;
 
   // Heatmap calculations
   const todayKey = toDateStr(new Date());
@@ -267,11 +267,11 @@ export function Dashboard() {
 
         <div className="stat-card">
           <div className="stat-icon pink">
-            <Trophy size={22} />
+            <Award size={22} />
           </div>
           <div className="stat-details">
-            <span className="stat-val">{unlockedTrophyCount} / {TROPHIES.length}</span>
-            <span className="stat-lbl">Trophies Unlocked</span>
+            <span className="stat-val">{unlockedAchievementCount} / {TROPHIES.length}</span>
+            <span className="stat-lbl">Achievements Unlocked</span>
           </div>
         </div>
       </div>

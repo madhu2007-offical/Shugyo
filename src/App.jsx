@@ -36,7 +36,7 @@ function App() {
             <Route path="sql-drills" element={<SqlDrills />} />
             <Route path="test-bank" element={<TestBank />} />
             <Route path="resources" element={<Resources />} />
-            <Route path="trophies" element={<Trophies />} />
+            <Route path="achievements" element={<Trophies />} />
           </Route>
 
           {/* Fallback Catch-All Route */}

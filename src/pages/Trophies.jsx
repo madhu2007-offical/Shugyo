@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import { calculateStreak } from '../utils/streakCalculator';
-import { evaluateTrophies } from '../utils/trophyEvaluator';
+import { evaluateAchievements } from '../utils/trophyEvaluator';
 import { TROPHIES, ROADMAP_NODES, MILESTONES, SQL_DRILLS } from '../data/trackerData';
 
 export function Trophies() {
@@ -73,14 +73,14 @@ export function Trophies() {
   }
 
   const streakCount = calculateStreak(streaks);
-  const trophyStatus = evaluateTrophies({
+  const achievementStatus = evaluateAchievements({
     progress,
     checklistItems: checklist,
     questionGrades: grades,
     testAttempts,
     streakCount
   });
-  const unlockedCount = Object.values(trophyStatus).filter(Boolean).length;
+  const unlockedCount = Object.values(achievementStatus).filter(Boolean).length;
 
   // Custom progress mapper per badge card
   const getBadgeProgress = (id) => {
@@ -135,7 +135,7 @@ export function Trophies() {
     <div className="fade-in">
       <div className="page-header">
         <div className="page-title">
-          <h1>Trophy Showcase</h1>
+          <h1>Achievements Case</h1>
           <p>Locked achievements stay grayed out until you genuinely complete the requirements.</p>
         </div>
       </div>
@@ -154,7 +154,7 @@ export function Trophies() {
 
       <div className="badges-grid">
         {TROPHIES.map((t) => {
-          const isUnlocked = !!trophyStatus[t.id];
+          const isUnlocked = !!achievementStatus[t.id];
           const icon = badgeIcons[t.id] || '🏆';
           const p = getBadgeProgress(t.id);
 

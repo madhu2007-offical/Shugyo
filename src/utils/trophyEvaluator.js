@@ -1,7 +1,7 @@
 /**
- * Evaluates which trophies are unlocked based on user tracking metrics.
+ * Evaluates which achievements are unlocked based on user tracking metrics.
  */
-export function evaluateTrophies({ progress, checklistItems, questionGrades, testAttempts, streakCount }) {
+export function evaluateAchievements({ progress, checklistItems, questionGrades, testAttempts, streakCount }) {
   // 1. Progress counts
   const completedPhases = progress?.filter(p => !p.node_id.startsWith('drill_') && p.status === 'done') || [];
   const completedPhasesCount = completedPhases.length;

@@ -38,7 +38,7 @@ export function Layout() {
     { path: '/sql-drills', label: 'SQL Drills', icon: <Terminal size={20} /> },
     { path: '/test-bank', label: 'Test Bank', icon: <FileQuestion size={20} /> },
     { path: '/resources', label: 'Resources', icon: <BookOpen size={20} /> },
-    { path: '/trophies', label: 'Trophies', icon: <Award size={20} /> },
+    { path: '/achievements', label: 'Achievements', icon: <Award size={20} /> },
   ];
 
   return (
