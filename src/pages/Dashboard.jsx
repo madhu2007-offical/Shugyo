@@ -383,20 +383,18 @@ export function Dashboard() {
         </div>
 
         {/* Daily Mastery Challenge Card */}
-        <div className="panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid var(--accent-line)', background: 'linear-gradient(145deg, var(--accent-soft) 0%, var(--surface) 60%)' }}>
+        <div className="daily-challenge-box">
           <div>
-            <div className="pressure-eyebrow" style={{ color: 'var(--accent)', marginBottom: '8px' }}>
-              <span className="pdot" style={{ background: 'var(--accent)', boxShadow: '0 0 8px var(--accent)' }}></span> DAILY MASTERY CHALLENGE
-            </div>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: '600', marginBottom: '10px' }}>
+            <div className="challenge-eyebrow">DAILY MASTERY CHALLENGE</div>
+            <h2 className="challenge-title">
               Q{dailyDrillIdx + 1}: {dailyDrill.topic}
             </h2>
-            <div className="qcard-tags" style={{ marginBottom: '16px' }}>
+            <div className="qcard-tags" style={{ marginBottom: '12px' }}>
               <span className={`difftag ${dailyDrill.difficulty}`}>{dailyDrill.difficulty.toUpperCase()}</span>
               <span className="qtag">SQL Drill</span>
               <span className="qtag">Today&apos;s Pick</span>
             </div>
-            <p style={{ fontSize: '13.5px', color: 'var(--text-dim)', lineHeight: '1.5' }}>
+            <p className="challenge-prompt">
               {dailyDrill.prompt}
             </p>
           </div>
@@ -407,8 +405,8 @@ export function Dashboard() {
                 ✓ Completed Today
               </div>
             ) : (
-              <Link to="/sql-drills" className="btn btn-primary" style={{ display: 'inline-flex', gap: '8px', fontSize: '13px', padding: '10px 20px', background: 'var(--accent)', color: '#0A0B0D' }}>
-                <Play size={14} fill="#0A0B0D" /> Solve Challenge
+              <Link to="/sql-drills" className="btn btn-primary" style={{ display: 'inline-flex', gap: '8px', fontSize: '13px', padding: '8px 16px', background: 'var(--accent)', color: '#fff' }}>
+                <Play size={14} fill="#fff" stroke="#fff" /> Solve Challenge
               </Link>
             )}
           </div>
