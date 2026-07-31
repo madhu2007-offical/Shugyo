@@ -30,8 +30,14 @@ export function SqlDrills() {
       window.alasql('DROP TABLE IF EXISTS customers');
       window.alasql('DROP TABLE IF EXISTS orders');
 
-      // Execute SQL Seed script
-      window.alasql(SQL_DRILLS_SCHEMA);
+      // Execute SQL Seed script statement by statement
+      const statements = SQL_DRILLS_SCHEMA.split(';')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+      
+      statements.forEach(stmt => {
+        window.alasql(stmt);
+      });
       setDbReady(true);
     } catch (err) {
       console.error('Alasql initialization error:', err);
