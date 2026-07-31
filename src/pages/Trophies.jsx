@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
 import { calculateStreak } from '../utils/streakCalculator';
 import { evaluateTrophies } from '../utils/trophyEvaluator';
 import { TROPHIES } from '../data/trackerData';
-import { Award, Lock, Sparkles, CheckCircle } from 'lucide-react';
+import { Award, Lock, CheckCircle } from 'lucide-react';
 
 export function Trophies() {
   const { user } = useAuth();

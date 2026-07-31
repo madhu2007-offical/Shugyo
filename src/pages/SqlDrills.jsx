@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase, logActivity } from '../supabaseClient';
 import { SQL_DRILLS, SQL_DRILLS_SCHEMA } from '../data/trackerData';
-import { CheckCircle2, AlertTriangle, Terminal, Play, RotateCcw, HelpCircle } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Terminal, Play, RotateCcw } from 'lucide-react';
 
 export function SqlDrills() {
   const { user } = useAuth();

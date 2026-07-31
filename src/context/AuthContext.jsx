@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 
 const AuthContext = createContext({
@@ -8,6 +9,7 @@ const AuthContext = createContext({
   signOut: () => {},
 });
 
+// eslint-disable-next-line react/prop-types
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);

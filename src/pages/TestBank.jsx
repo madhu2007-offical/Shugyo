@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase, logActivity } from '../supabaseClient';
 import { QUIZZES } from '../data/trackerData';
-import { FileQuestion, AlertCircle, CheckCircle2, ChevronRight, Award } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ChevronRight, Award } from 'lucide-react';
 
 export function TestBank() {
   const { user } = useAuth();
@@ -17,7 +17,6 @@ export function TestBank() {
   const [score, setScore] = useState(0);
   
   const [loading, setLoading] = useState(true);
-  const [savingScore, setSavingScore] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   // 1. Fetch historical quiz attempts from DB
@@ -44,6 +43,7 @@ export function TestBank() {
     if (user) {
       fetchAttempts();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleStartQuiz = (quiz) => {
@@ -81,7 +81,6 @@ export function TestBank() {
   };
 
   const saveQuizAttempt = async (finalScore) => {
-    setSavingScore(true);
     try {
       const { error } = await supabase
         .from('test_attempts')
@@ -103,8 +102,6 @@ export function TestBank() {
     } catch (err) {
       console.error('Error logging quiz attempt:', err);
       setErrorMsg('Failed to log your score to the database.');
-    } finally {
-      setSavingScore(false);
     }
   };
 

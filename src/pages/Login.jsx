@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabaseClient';
@@ -77,13 +77,13 @@ export function Login() {
               <Mail size={32} className="accent-glow" />
             </div>
             <h1>Check Your Email</h1>
-            <p className="subtitle">We've sent a verification link to:</p>
+            <p className="subtitle">We&apos;ve sent a verification link to:</p>
             <div className="email-highlight">{email}</div>
           </div>
           
           <div className="auth-body text-center">
             <p>Please click the link in your email to confirm your account and log in.</p>
-            <p className="text-muted">Didn't receive it? Check your spam folder or try again.</p>
+            <p className="text-muted">Didn&apos;t receive it? Check your spam folder or try again.</p>
           </div>
 
           <div className="auth-footer">
