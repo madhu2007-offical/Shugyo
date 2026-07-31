@@ -29,7 +29,7 @@ create trigger on_auth_user_created
   for each row execute procedure public.handle_new_user();
 
 
--- 2. Progress Table
+-- 2. Progress Table (Tracks roadmap phases P0-P8 and SQL Drills drill_0 to drill_13)
 create table public.progress (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users(id) on delete cascade not null,
@@ -49,7 +49,7 @@ create policy "Users can manage their own progress"
   with check (auth.uid() = user_id);
 
 
--- 3. Checklist Items Table
+-- 3. Checklist Items Table (Tracks milestones 0-9)
 create table public.checklist_items (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users(id) on delete cascade not null,
@@ -69,7 +69,7 @@ create policy "Users can manage their own checklist items"
   with check (auth.uid() = user_id);
 
 
--- 4. Test Attempts Table
+-- 4. Test Attempts Table (Tracks exam completions)
 create table public.test_attempts (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users(id) on delete cascade not null,
@@ -89,7 +89,7 @@ create policy "Users can manage their own test attempts"
   with check (auth.uid() = user_id);
 
 
--- 5. Streaks Table
+-- 5. Streaks Table (Tracks active learning days)
 create table public.streaks (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users(id) on delete cascade not null,
@@ -103,6 +103,26 @@ alter table public.streaks enable row level security;
 
 create policy "Users can manage their own streaks"
   on public.streaks
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+
+-- 6. Question Grades Table (Tracks self-graded questions in the Test Bank)
+create table public.question_grades (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  question_id integer not null,
+  grade text not null check (grade in ('good', 'bad')),
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint unique_user_question unique (user_id, question_id)
+);
+
+-- Enable RLS
+alter table public.question_grades enable row level security;
+
+create policy "Users can manage their own question grades"
+  on public.question_grades
   for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);

@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase, logActivity } from '../supabaseClient';
-import { CHECKLIST_CATEGORIES } from '../data/trackerData';
-import { Check } from 'lucide-react';
+import { MILESTONES, BOOKS } from '../data/trackerData';
 
 export function Checklist() {
   const { user } = useAuth();
+  
   const [localChecked, setLocalChecked] = useState({});
   const [pendingChanges, setPendingChanges] = useState({});
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
-  const [syncStatus, setSyncStatus] = useState('Synced'); // Synced, Syncing..., Error
+  const [syncStatus, setSyncStatus] = useState('Synced');
 
-  // 1. Fetch initial checklist state
+  // 1. Fetch initial checklist state from Supabase
   useEffect(() => {
     if (!user) return;
 
@@ -43,16 +43,14 @@ export function Checklist() {
     fetchChecklist();
   }, [user]);
 
-  // 2. Debounce and flush pending changes to Supabase
+  // 2. Debounce and flush changes to Supabase in batches
   useEffect(() => {
     if (Object.keys(pendingChanges).length === 0) return;
 
     setSyncStatus('Changes pending...');
     const delayDebounce = setTimeout(async () => {
-      setSyncStatus('Saving to Supabase...');
+      setSyncStatus('Saving...');
       const changesToFlush = { ...pendingChanges };
-      
-      // Reset pending changes queue so new clicks during saving can start a new timer
       setPendingChanges({});
 
       try {
@@ -74,8 +72,7 @@ export function Checklist() {
       } catch (err) {
         console.error('Failed to sync checklist changes:', err);
         setSyncStatus('Error saving');
-        setErrorMsg('Some changes failed to save to the database. They will be retried on your next change.');
-        // Put the failed changes back into the pending queue
+        setErrorMsg('Failed to sync some milestones. They will be retried on next change.');
         setPendingChanges(prev => ({
           ...changesToFlush,
           ...prev
@@ -86,17 +83,15 @@ export function Checklist() {
     return () => clearTimeout(delayDebounce);
   }, [pendingChanges, user]);
 
-  const handleToggle = (itemId) => {
-    const currentVal = !!localChecked[itemId];
-    const nextVal = !currentVal;
+  const handleToggle = (idx) => {
+    const itemId = `milestone_${idx}`;
+    const nextVal = !localChecked[itemId];
 
-    // 1. Instantly update local UI
     setLocalChecked(prev => ({
       ...prev,
       [itemId]: nextVal
     }));
 
-    // 2. Queue for database batch write
     setPendingChanges(prev => ({
       ...prev,
       [itemId]: nextVal
@@ -109,11 +104,14 @@ export function Checklist() {
         <div className="loader-card">
           <div className="spinner"></div>
           <h2>修行 SHUGYO</h2>
-          <p>Syncing checklist index...</p>
+          <p>Syncing milestones...</p>
         </div>
       </div>
     );
   }
+
+  const doneCount = MILESTONES.filter((_, idx) => localChecked[`milestone_${idx}`]).length;
+  const pct = Math.round((doneCount / MILESTONES.length) * 100);
 
   return (
     <div className="fade-in">
@@ -122,8 +120,8 @@ export function Checklist() {
           <h1>Mastery Checklist</h1>
           <p>Self-assess your structural understanding of database engines. Be honest with yourself.</p>
         </div>
-        <div style={{ fontSize: '0.85rem', color: syncStatus === 'Synced' ? 'var(--color-success)' : syncStatus === 'Error saving' ? 'var(--color-danger)' : 'var(--color-warning)' }}>
-          Database Sync State: <strong>{syncStatus}</strong>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: syncStatus === 'Synced' ? 'var(--good)' : 'var(--warn)' }}>
+          Sync: <strong>{syncStatus}</strong>
         </div>
       </div>
 
@@ -133,39 +131,54 @@ export function Checklist() {
         </div>
       )}
 
-      <div className="checklist-container">
-        {CHECKLIST_CATEGORIES.map((category) => {
-          const checkedInCategory = category.items.filter(item => localChecked[item.id]).length;
-          
-          return (
-            <div key={category.id} className="checklist-category-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                <h3 style={{ margin: 0 }}>{category.title}</h3>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  {checkedInCategory} / {category.items.length} Mastered
-                </span>
+      <div className="mastery-grid">
+        {/* Left Side: Milestones List */}
+        <div className="panel">
+          <div className="progress-summary">
+            <div>
+              <div className="progress-num">{pct}<span>%</span></div>
+            </div>
+            <div style={{ flex: 1, marginLeft: '24px' }}>
+              <div className="progress-bar-lg">
+                <span style={{ width: `${pct}%` }}></span>
               </div>
-              
-              <div className="checklist-items-list">
-                {category.items.map((item) => {
-                  const isChecked = !!localChecked[item.id];
-                  return (
-                    <div 
-                      key={item.id} 
-                      className={`checklist-row ${isChecked ? 'checked' : ''}`}
-                      onClick={() => handleToggle(item.id)}
-                    >
-                      <div className="checkbox-custom">
-                        {isChecked && <Check size={14} />}
-                      </div>
-                      <span className="checklist-text">{item.text}</span>
-                    </div>
-                  );
-                })}
+              <div className="streak-note" style={{ marginTop: '6px' }}>
+                {doneCount} of {MILESTONES.length} milestones done
               </div>
             </div>
-          );
-        })}
+          </div>
+
+          <h3>Milestones</h3>
+          <div id="checklist">
+            {MILESTONES.map((milestone, idx) => {
+              const isChecked = !!localChecked[`milestone_${idx}`];
+              return (
+                <div key={idx} className={`checklist-item ${isChecked ? 'checked' : ''}`}>
+                  <input
+                    type="checkbox"
+                    id={`chk-${idx}`}
+                    checked={isChecked}
+                    onChange={() => handleToggle(idx)}
+                  />
+                  <label htmlFor={`chk-${idx}`}>{milestone}</label>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right Side: Books List */}
+        <div className="panel" style={{ height: 'fit-content' }}>
+          <h3>The five books, if you only get these</h3>
+          <ul className="books-list">
+            {BOOKS.map((b, idx) => (
+              <li key={idx}>
+                <span className="b-title">{b.title}</span>
+                <span className="b-author">{b.author}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );

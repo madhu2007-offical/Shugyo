@@ -1,155 +1,164 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase, logActivity } from '../supabaseClient';
 import { SQL_DRILLS, SQL_DRILLS_SCHEMA } from '../data/trackerData';
-import { CheckCircle2, AlertTriangle, Terminal, Play, RotateCcw } from 'lucide-react';
 
 export function SqlDrills() {
   const { user } = useAuth();
   
-  const [activeDrill, setActiveDrill] = useState(SQL_DRILLS[0]);
   const [completedDrills, setCompletedDrills] = useState([]);
+  const [activeDrillIdx, setActiveDrillIdx] = useState(0);
+  const [queryInput, setQueryInput] = useState('');
   
-  const [userQuery, setUserQuery] = useState('');
   const [queryResult, setQueryResult] = useState(null);
-  
-  const [dbLoading, setDbLoading] = useState(true);
-  const [runningQuery, setRunningQuery] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  
-  const dbRef = useRef(null);
+  const [statusText, setStatusText] = useState('');
+  const [statusClass, setStatusClass] = useState('');
+  const [dbReady, setDbReady] = useState(false);
 
-  // 1. Initialize SQLite WASM db
+  // 1. Initialize Alasql schema
   useEffect(() => {
-    const initDb = async () => {
-      setDbLoading(true);
-      setErrorMsg('');
-      try {
-        if (!window.initSqlJs) {
-          throw new Error('SQLite library (sql.js) is not loaded yet. Please refresh the page.');
-        }
-
-        const SQL = await window.initSqlJs({
-          locateFile: (file) => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`,
-        });
-
-        const db = new SQL.Database();
-        // Run schema definition and insert seed data
-        db.run(SQL_DRILLS_SCHEMA);
-        dbRef.current = db;
-      } catch (err) {
-        console.error('Failed to initialize SQLite database:', err);
-        setErrorMsg(err.message || 'SQLite WASM compilation failed.');
-      } finally {
-        setDbLoading(false);
+    try {
+      if (!window.alasql) {
+        throw new Error('Alasql library is loading...');
       }
-    };
+      
+      // Clear any pre-existing tables to re-initialize cleanly
+      window.alasql('DROP TABLE IF EXISTS employees');
+      window.alasql('DROP TABLE IF EXISTS departments');
+      window.alasql('DROP TABLE IF EXISTS customers');
+      window.alasql('DROP TABLE IF EXISTS orders');
 
-    initDb();
-
-    return () => {
-      if (dbRef.current) {
-        dbRef.current.close();
-      }
-    };
+      // Execute SQL Seed script
+      window.alasql(SQL_DRILLS_SCHEMA);
+      setDbReady(true);
+    } catch (err) {
+      console.error('Alasql initialization error:', err);
+      setErrorMsg('Failed to launch in-browser SQL compiler.');
+    }
   }, []);
 
-  // 2. Fetch completed drills from Supabase progress table
-  useEffect(() => {
-    if (!user) return;
+  // 2. Fetch completed drills from Supabase
+  const fetchCompletedDrills = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('progress')
+        .select('node_id')
+        .eq('user_id', user.id)
+        .eq('status', 'done')
+        .like('node_id', 'drill_%');
 
-    const fetchCompletedDrills = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('progress')
-          .select('node_id')
-          .eq('user_id', user.id)
-          .eq('status', 'done')
-          .like('node_id', 'drill_%');
-
-        if (error) throw error;
-        setCompletedDrills(data.map(item => item.node_id));
-      } catch (err) {
-        console.error('Error fetching completed drills:', err);
-      }
-    };
-
-    fetchCompletedDrills();
-  }, [user]);
-
-  // Load drill template query
-  useEffect(() => {
-    if (activeDrill) {
-      setUserQuery('-- Write your SQL query here\nSELECT * FROM employees;');
-      setQueryResult(null);
-      setSuccessMsg('');
-      setErrorMsg('');
+      if (error) throw error;
+      setCompletedDrills(data.map(item => parseInt(item.node_id.replace('drill_', ''), 10)));
+    } catch (err) {
+      console.error('Error fetching completed drills:', err);
     }
-  }, [activeDrill]);
-
-  const compareSQLResults = (res1, res2) => {
-    if (!res1 || !res2 || res1.length === 0 || res2.length === 0) return false;
-    const r1 = res1[0];
-    const r2 = res2[0];
-
-    if (r1.values.length !== r2.values.length) return false;
-    if (r1.columns.length !== r2.columns.length) return false;
-
-    // Helper to sort row representations for order-independent evaluation
-    const stringifyRows = (rows) => 
-      rows.map(row => row.map(cell => cell === null ? 'NULL' : cell.toString()).join('|'))
-          .sort()
-          .join('\n');
-
-    return stringifyRows(r1.values) === stringifyRows(r2.values);
   };
 
-  const handleRunQuery = () => {
-    if (!dbRef.current) {
-      setErrorMsg('Database is not initialized.');
+  useEffect(() => {
+    if (user) {
+      fetchCompletedDrills();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Handle drill change
+  const handleSelectDrill = (idx) => {
+    setActiveDrillIdx(idx);
+    setQueryInput('-- write your SQL here\n');
+    setQueryResult(null);
+    setErrorMsg('');
+    setSuccessMsg('');
+    setStatusText('');
+    setStatusClass('');
+  };
+
+  const normalizeRows = (rows, keepOrder) => {
+    if (!Array.isArray(rows)) return null;
+    const norm = rows.map(r => {
+      const sorted = {};
+      Object.keys(r).sort().forEach(k => {
+        let v = r[k];
+        if (typeof v === 'number') v = Math.round(v * 100) / 100;
+        sorted[k] = v;
+      });
+      return JSON.stringify(sorted);
+    });
+    return keepOrder ? norm : norm.slice().sort();
+  };
+
+  const resultsMatch = (a, b, keepOrder) => {
+    const na = normalizeRows(a, keepOrder);
+    const nb = normalizeRows(b, keepOrder);
+    if (!na || !nb) return false;
+    if (na.length !== nb.length) return false;
+    return na.every((v, i) => v === nb[i]);
+  };
+
+  const handleRunQuery = async () => {
+    if (!dbReady || !window.alasql) return;
+    
+    setQueryResult(null);
+    setErrorMsg('');
+    setSuccessMsg('');
+    setStatusText('');
+    setStatusClass('');
+
+    const drill = SQL_DRILLS[activeDrillIdx];
+    let userRows;
+
+    try {
+      userRows = window.alasql(queryInput);
+    } catch (err) {
+      setStatusText('⚠ Query error');
+      setStatusClass('fail');
+      setErrorMsg(err.message || String(err));
       return;
     }
 
-    setRunningQuery(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    setQueryResult(null);
+    if (!Array.isArray(userRows)) {
+      setStatusText('⚠ Not a SELECT');
+      setStatusClass('error');
+      setErrorMsg("This ran, but didn't return rows — make sure you're writing a SELECT query.");
+      return;
+    }
+
+    setQueryResult(userRows);
 
     try {
-      // 1. Execute User query
-      const userRes = dbRef.current.exec(userQuery);
-      setQueryResult(userRes);
-
-      // 2. Execute target validation query
-      const targetRes = dbRef.current.exec(activeDrill.correctQuery);
-
-      // 3. Compare outputs
-      const isCorrect = compareSQLResults(userRes, targetRes);
+      // Execute the model query to compare
+      const modelRows = window.alasql(drill.solution);
+      const isCorrect = resultsMatch(userRows, modelRows, drill.checkOrder);
 
       if (isCorrect) {
-        setSuccessMsg('Perfect! Your query output matches the target output.');
-        handleSaveCompletion();
+        setStatusText('✓ Matches expected output');
+        setStatusClass('ok');
+        setSuccessMsg('Perfect! Your query results match the target results.');
+        
+        // Sync progress state to Supabase
+        await handleSaveCompletion(activeDrillIdx);
       } else {
-        setErrorMsg('Query executed successfully, but the output did not match the expected result.');
+        setStatusText("✗ Doesn't match yet");
+        setStatusClass('fail');
+        setErrorMsg("Query ran successfully, but the output rows didn't match the expected result.");
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg(err.message || 'SQL compilation or syntax error.');
-    } finally {
-      setRunningQuery(false);
+      setStatusText('⚠ Match check error');
+      setStatusClass('error');
     }
   };
 
-  const handleSaveCompletion = async () => {
-    if (completedDrills.includes(activeDrill.id)) return;
+  const handleSaveCompletion = async (drillIdx) => {
+    if (completedDrills.includes(drillIdx)) return;
 
     try {
       const { error } = await supabase
         .from('progress')
         .upsert({
           user_id: user.id,
-          node_id: activeDrill.id,
+          node_id: `drill_${drillIdx}`,
           status: 'done',
           updated_at: new Date().toISOString(),
         }, {
@@ -158,151 +167,157 @@ export function SqlDrills() {
 
       if (error) throw error;
 
-      setCompletedDrills(prev => [...prev, activeDrill.id]);
+      setCompletedDrills(prev => [...prev, drillIdx]);
       await logActivity(user.id);
     } catch (err) {
-      console.error('Error saving drill completion state:', err);
+      console.error('Error saving SQL completion state:', err);
     }
   };
 
-  const handleResetQuery = () => {
-    setUserQuery('-- Write your SQL query here\nSELECT * FROM employees;');
-    setQueryResult(null);
-    setErrorMsg('');
-    setSuccessMsg('');
-  };
-
-  if (dbLoading) {
-    return (
-      <div className="fullscreen-loader">
-        <div className="loader-card">
-          <div className="spinner"></div>
-          <h2>修行 SHUGYO</h2>
-          <p>Compiling SQLite WASM kernel...</p>
-        </div>
-      </div>
-    );
-  }
+  const activeDrill = SQL_DRILLS[activeDrillIdx];
 
   return (
     <div className="fade-in">
       <div className="page-header">
         <div className="page-title">
           <h1>SQL Drills</h1>
-          <p>Practice writing queries inside an in-browser SQLite sandbox environment.</p>
+          <p>Practice writing queries against a small sample database with a real-time output validation check.</p>
         </div>
       </div>
 
-      <div className="drills-layout">
-        {/* Left Side: Drill Selector & Description */}
-        <div className="drill-card">
-          <h2>Select a Drill</h2>
-          <div className="drill-list">
-            {SQL_DRILLS.map((drill) => {
-              const isCompleted = completedDrills.includes(drill.id);
-              const isActive = activeDrill.id === drill.id;
-              
+      {/* Schema Box */}
+      <div className="sql-schema">
+        <b>employees</b>(emp_id, name, dept_id, salary, manager_id, hire_date) · <b>departments</b>(dept_id, dept_name, budget) · <b>customers</b>(customer_id, name, city) · <b>orders</b>(order_id, customer_id, emp_id, order_date, amount) — 10 employees, 4 departments, 6 customers, and 10 orders loaded.
+      </div>
+
+      <div className="streak-grid" style={{ gridTemplateColumns: '1fr 2fr' }}>
+        {/* Left Side: Drill Select */}
+        <div className="panel" style={{ height: 'fit-content', maxHeight: '600px', overflowY: 'auto' }}>
+          <h3 style={{ marginBottom: '1rem' }}>Select a Drill</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {SQL_DRILLS.map((drill, idx) => {
+              const isCompleted = completedDrills.includes(idx);
+              const isActive = activeDrillIdx === idx;
               return (
                 <button
-                  key={drill.id}
-                  className={`drill-item-btn ${isActive ? 'active' : ''}`}
-                  onClick={() => setActiveDrill(drill)}
+                  key={idx}
+                  onClick={() => handleSelectDrill(idx)}
+                  className={`btn btn-block ${isActive ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ justifyContent: 'space-between', textAlign: 'left', padding: '10px 15px' }}
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <strong>{drill.title}</strong>
-                  </span>
-                  {isCompleted && (
-                    <span style={{ color: 'var(--color-success)', fontSize: '0.8rem', fontWeight: 'bold' }}>
-                      ✓ Mastered
-                    </span>
-                  )}
+                  <span style={{ fontSize: '13px' }}>Q{idx + 1}. {drill.topic}</span>
+                  {isCompleted && <span style={{ color: 'var(--good)', fontSize: '11px' }}>✓ Solved</span>}
                 </button>
               );
             })}
           </div>
-
-          <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-glass)', paddingTop: '1rem' }}>
-            <h3 style={{ color: 'var(--color-secondary)', marginBottom: '0.5rem' }}>Instructions</h3>
-            <p style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>{activeDrill.instructions}</p>
-          </div>
         </div>
 
-        {/* Right Side: SQL Sandbox Editor & Table results */}
-        <div className="sandbox-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600' }}>
-              <Terminal size={18} color="var(--color-secondary)" />
-              SQLite Sandbox Editor
+        {/* Right Side: Active drill query console */}
+        <div className="sql-card" style={{ margin: 0 }}>
+          <div className="sql-card-top">
+            <div className="qcard-tags">
+              <span className={`difftag ${activeDrill.difficulty}`}>
+                {activeDrill.difficulty.charAt(0).toUpperCase() + activeDrill.difficulty.slice(1)}
+              </span>
+            </div>
+            <span className="qnum">
+              {completedDrills.includes(activeDrillIdx) && <span className="sql-solved-pill">✓ Solved</span>}
+              Q{activeDrillIdx + 1} / {SQL_DRILLS.length}
             </span>
-            <button className="link-btn" onClick={handleResetQuery} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <RotateCcw size={14} /> Reset
-            </button>
           </div>
 
-          <textarea
-            className="sql-textarea"
-            value={userQuery}
-            onChange={(e) => setUserQuery(e.target.value)}
-          />
+          <div className="sql-prompt" style={{ fontWeight: '500' }}>
+            {activeDrill.prompt}
+          </div>
 
-          <div>
-            <button
-              className="btn btn-primary accent-button btn-block"
-              onClick={handleRunQuery}
-              disabled={runningQuery}
-            >
-              <Play size={16} /> Run & Verify Query
-            </button>
+          <div className="sql-editor">
+            <div className="sql-editor-bar">
+              <span style={{ background: '#F27878' }}></span>
+              <span style={{ background: '#F2B84B' }}></span>
+              <span style={{ background: '#79E2A6' }}></span>
+              <span className="dot-label">query_{activeDrillIdx + 1}.sql</span>
+            </div>
+            <div className="sql-editor-body">
+              <textarea
+                className="sql-editor-textarea"
+                value={queryInput}
+                onChange={(e) => setQueryInput(e.target.value)}
+                spellCheck="false"
+              />
+            </div>
+            <div className="sql-editor-actions">
+              <button 
+                className="sql-run-btn"
+                onClick={handleRunQuery}
+              >
+                ▶ Run Query
+              </button>
+              
+              <span className={`sql-status show ${statusClass}`}>
+                {statusText}
+              </span>
+
+              <button 
+                className="sql-reset-btn"
+                onClick={() => {
+                  setQueryInput('-- write your SQL here\n');
+                  setQueryResult(null);
+                  setErrorMsg('');
+                  setSuccessMsg('');
+                  setStatusText('');
+                  setStatusClass('');
+                }}
+              >
+                Reset
+              </button>
+            </div>
           </div>
 
           {errorMsg && (
-            <div className="error-banner fade-in" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <AlertTriangle size={18} />
-              <span>{errorMsg}</span>
+            <div className="sql-output fade-in">
+              <div className="sql-output-error">{errorMsg}</div>
             </div>
           )}
 
           {successMsg && (
-            <div className="fade-in" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-success)', background: 'rgba(57, 255, 20, 0.05)', border: '1px solid rgba(57, 255, 20, 0.2)', padding: '0.75rem 1rem', borderRadius: '12px' }}>
-              <CheckCircle2 size={18} />
-              <span>{successMsg}</span>
+            <div className="sql-output fade-in" style={{ color: 'var(--good)', background: 'var(--good-soft)', border: '1px solid var(--good)', padding: '12px 14px', borderRadius: '8px', fontSize: '13px' }}>
+              {successMsg}
             </div>
           )}
 
-          {/* Query Outputs */}
+          {/* Result Row Table */}
           {queryResult && queryResult.length > 0 && (
-            <div style={{ overflowX: 'auto', marginTop: '0.5rem' }}>
-              <div className="schema-title">Output Table</div>
-              <table className="query-results-table">
-                <thead>
-                  <tr>
-                    {queryResult[0].columns.map((col, idx) => (
-                      <th key={idx}>{col}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {queryResult[0].values.map((row, rowIdx) => (
-                    <tr key={rowIdx}>
-                      {row.map((cell, cellIdx) => (
-                        <td key={cellIdx}>{cell === null ? 'NULL' : cell.toString()}</td>
+            <div className="sql-output fade-in">
+              <div className="sql-output-label">RESULT</div>
+              <div className="sql-output-table-wrap">
+                <table className="sql-output-table">
+                  <thead>
+                    <tr>
+                      {Object.keys(queryResult[0]).map((col, cIdx) => (
+                        <th key={cIdx}>{col}</th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {queryResult.slice(0, 20).map((row, rIdx) => (
+                      <tr key={rIdx}>
+                        {Object.keys(queryResult[0]).map((col, cIdx) => (
+                          <td key={cIdx}>
+                            {row[col] === null || row[col] === undefined ? 'NULL' : String(row[col])}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="sql-row-count">
+                {queryResult.length} row{queryResult.length === 1 ? '' : 's'} returned
+                {queryResult.length > 20 ? ' (showing first 20)' : ''}
+              </div>
             </div>
           )}
-
-          {/* Schema Browser info */}
-          <div className="schema-browser">
-            <div className="schema-title">Available Tables & Columns</div>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-              <strong>departments</strong> (id, name)
-              <br />
-              <strong>employees</strong> (id, name, department_id, salary, manager_id)
-            </div>
-          </div>
         </div>
       </div>
     </div>
