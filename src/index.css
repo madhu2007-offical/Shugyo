@@ -725,6 +725,8 @@ body::before {
 
 .fc-node {
   cursor: pointer;
+  animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
 }
 
 .fc-node .fc-box {
@@ -1010,3 +1012,12 @@ body::before {
 .stagger-item-3 { transition-delay: 0.15s; }
 .stagger-item-4 { transition-delay: 0.2s; }
 .stagger-item-5 { transition-delay: 0.25s; }
+
+@keyframes slide-up {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}

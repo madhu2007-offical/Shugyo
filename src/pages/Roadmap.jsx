@@ -415,9 +415,7 @@ export function Roadmap() {
                     className={nodeClass}
                     onClick={() => setSelectedNodeId(selectedNodeId === p.id ? null : p.id)}
                     style={{ 
-                      animation: 'slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards', 
-                      animationDelay: `${p.col * 0.25}s`,
-                      opacity: 0 
+                      animationDelay: `${p.col * 0.15}s`
                     }}
                   >
                     {/* Glowing highlight pulse */}
