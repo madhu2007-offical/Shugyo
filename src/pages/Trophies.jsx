@@ -45,7 +45,6 @@ export function Trophies() {
   });
   const unlockedCount = Object.values(achievementStatus).filter(Boolean).length;
 
-  // Custom progress mapper per badge card
   const getBadgeProgress = (id) => {
     switch (id) {
       case 'halfway':
@@ -96,27 +95,30 @@ export function Trophies() {
 
   return (
     <div className="fade-in">
-      <div className="page-header">
+      <div className="page-header scroll-reveal visible">
         <div className="page-title">
           <h1>Achievements Case</h1>
           <p>Locked achievements stay grayed out until you genuinely complete the requirements.</p>
         </div>
       </div>
 
-      <div className="badges-summary">
+      <div className="badges-summary scroll-reveal visible" style={{ marginBottom: '2rem' }}>
         <div className="badges-count">
           <b>{unlockedCount}</b> / {TROPHIES.length} unlocked
         </div>
       </div>
 
       <div className="badges-grid">
-        {TROPHIES.map((t) => {
+        {TROPHIES.map((t, idx) => {
           const isUnlocked = !!achievementStatus[t.id];
           const icon = badgeIcons[t.id] || '🏆';
           const p = getBadgeProgress(t.id);
 
           return (
-            <div key={t.id} className={`badge-card ${isUnlocked ? 'unlocked' : 'locked'}`}>
+            <div 
+              key={t.id} 
+              className={`badge-card scroll-reveal visible stagger-item-${(idx % 3) + 1} ${isUnlocked ? 'unlocked' : 'locked'}`}
+            >
               <div className="badge-icon">
                 {isUnlocked ? icon : '🔒'}
               </div>

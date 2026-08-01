@@ -34,6 +34,8 @@
   --radius: 12px;
   --radius-sm: 6px;
   --shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -51,7 +53,19 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Subtle accent background light source */
+/* Scroll Progress Bar at very top of screen */
+.scroll-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--good));
+  z-index: 9999;
+  width: 0%;
+  transition: width 0.1s ease-out;
+}
+
+/* Subtle accent background light source with parallax capability */
 body::before {
   content: '';
   position: fixed;
@@ -62,6 +76,8 @@ body::before {
   background: radial-gradient(circle, rgba(99, 102, 241, 0.04) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
+  transform: translateY(var(--scroll-offset, 0px));
+  transition: transform 0.1s ease-out;
 }
 
 /* Sidebar layout */
@@ -204,7 +220,19 @@ body::before {
   margin-top: 0.35rem;
 }
 
-/* Clean Cards & Panels */
+/* Scroll-Driven Animations: Entrance Slide-In */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Clean Cards & Panels with Hover Lift */
 .panel {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -212,6 +240,12 @@ body::before {
   padding: 28px;
   margin-bottom: 1.5rem;
   box-shadow: var(--shadow);
+  transition: transform var(--transition-normal), border-color var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.panel:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
 .panel h3 {
@@ -237,6 +271,12 @@ body::before {
   display: flex;
   align-items: center;
   gap: 1rem;
+  transition: transform var(--transition-normal), border-color var(--transition-normal);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-hover);
 }
 
 .stat-icon {
@@ -336,6 +376,8 @@ body::before {
 .lc-bar-fill {
   height: 100%;
   border-radius: 2px;
+  width: 0%;
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .lc-bar-fill.easy { background: var(--good); }
@@ -353,6 +395,11 @@ body::before {
   justify-content: space-between;
   position: relative;
   overflow: hidden;
+  transition: border-color var(--transition-normal);
+}
+
+.daily-challenge-box:hover {
+  border-color: var(--accent-line);
 }
 
 .daily-challenge-box::before {
@@ -562,7 +609,7 @@ body::before {
   border-color: var(--accent-line);
 }
 
-/* Clean buttons */
+/* Clean buttons with press/hover animations */
 .btn {
   font-family: var(--font-body);
   font-size: 13px;
@@ -575,7 +622,7 @@ body::before {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: all 0.15s ease;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
 }
 
 .btn-primary {
@@ -584,7 +631,12 @@ body::before {
 }
 
 .btn-primary:hover {
-  opacity: 0.9;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.12);
+}
+
+.btn-primary:active {
+  transform: translateY(0.5px);
 }
 
 .btn-secondary {
@@ -596,6 +648,11 @@ body::before {
 .btn-secondary:hover {
   color: var(--text);
   background: rgba(255, 255, 255, 0.02);
+  transform: translateY(-1px);
+}
+
+.btn-secondary:active {
+  transform: translateY(0.5px);
 }
 
 .btn-block {
@@ -651,6 +708,7 @@ body::before {
   stroke: var(--border);
   stroke-width: 1.5;
   rx: 6px;
+  transition: stroke var(--transition-normal), fill var(--transition-normal);
 }
 
 .fc-node.done .fc-box {
@@ -664,6 +722,7 @@ body::before {
 .fc-node.selected .fc-box {
   stroke: var(--text);
   stroke-width: 2;
+  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.25));
 }
 
 .fc-node .fc-code {
@@ -683,14 +742,24 @@ body::before {
   font-size: 9px;
 }
 
+/* Roadmap self-drawing path line animations */
 .fc-edge {
   stroke: var(--border);
   stroke-width: 1.5;
   fill: none;
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: draw-path 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .fc-edge.done {
   stroke: var(--good);
+}
+
+@keyframes draw-path {
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 .fc-flag .flag-pill {
@@ -733,6 +802,11 @@ body::before {
   border-radius: var(--radius);
   background: var(--surface);
   margin-bottom: 12px;
+  transition: border-color var(--transition-normal);
+}
+
+.phase-block:hover {
+  border-color: var(--border-hover);
 }
 
 .phase-head {
@@ -765,6 +839,12 @@ body::before {
   background: var(--surface-2);
   border-radius: var(--radius-sm);
   padding: 14px;
+  transition: transform var(--transition-normal), border-color var(--transition-normal);
+}
+
+.res-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-hover);
 }
 
 /* SQL Practice Drills interface */
@@ -806,6 +886,11 @@ body::before {
   background: var(--surface);
   padding: 24px;
   margin-bottom: 12px;
+  transition: transform var(--transition-normal), border-color var(--transition-normal);
+}
+
+.qcard:hover {
+  border-color: var(--border-hover);
 }
 
 .difftag {
@@ -828,11 +913,17 @@ body::before {
   background: var(--surface);
   padding: 20px;
   text-align: center;
+  transition: transform var(--transition-normal), border-color var(--transition-normal);
 }
 
 .badge-card.unlocked {
   border-color: var(--accent);
   background: linear-gradient(185deg, var(--accent-soft) 0%, var(--surface) 60%);
+}
+
+.badge-card.unlocked:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
 }
 
 .badge-name {
@@ -856,3 +947,10 @@ body::before {
   .logo-text, .nav-item span, .user-details { display: none; }
   .main-content { margin-left: 68px; padding: 2rem; }
 }
+
+/* Staggered transition delays for elements when in viewport */
+.stagger-item-1 { transition-delay: 0.05s; }
+.stagger-item-2 { transition-delay: 0.1s; }
+.stagger-item-3 { transition-delay: 0.15s; }
+.stagger-item-4 { transition-delay: 0.2s; }
+.stagger-item-5 { transition-delay: 0.25s; }

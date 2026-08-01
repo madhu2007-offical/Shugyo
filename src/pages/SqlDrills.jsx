@@ -51,6 +51,41 @@ const generateQueryPlan = (sql) => {
   };
 };
 
+function SQLDrillsAnimation() {
+  return (
+    <div className="panel scroll-reveal visible" style={{ display: 'flex', gap: '24px', alignItems: 'center', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, var(--surface) 100%)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', marginBottom: '2.5rem' }}>
+      <div style={{ flexGrow: 1 }}>
+        <h4 style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>⚡ Executing Against Index</h4>
+        <p style={{ fontSize: '13px', color: 'var(--text-dim)', lineHeight: '1.6', margin: 0 }}>
+          Instead of doing a full table scan scanning all 100,000 rows sequentially (`Seq Scan`), the database engine traverses a B-Tree index structure (`Index Scan`). This allows matching rows to be retrieved in logarithmic time, \(O(\log N)\) operations, reducing execution latency from minutes to microseconds.
+        </p>
+      </div>
+      
+      <svg width="180" height="90" viewBox="0 0 180 90" style={{ flexShrink: 0, background: '#090a0f', borderRadius: '6px', border: '1px solid var(--border)' }}>
+        {/* Index Blocks */}
+        <rect x="15" y="35" width="36" height="20" rx="3" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1" />
+        <text x="33" y="47" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">[1 - 30]</text>
+
+        <rect x="72" y="35" width="36" height="20" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="1" />
+        <text x="90" y="47" textAnchor="middle" fill="var(--accent)" fontSize="7" fontFamily="var(--font-mono)">[31 - 60]</text>
+        
+        <rect x="129" y="35" width="36" height="20" rx="3" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1" />
+        <text x="147" y="47" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">[61 - 90]</text>
+
+        {/* Scan line */}
+        <path d="M 90 10 L 90 35 M 90 55 L 90 80" stroke="var(--accent)" strokeWidth="1.2" strokeDasharray="3,3" fill="none" />
+        
+        {/* Pulse dot */}
+        <circle cx="90" cy="22" r="3" fill="var(--good)">
+          <animate attributeName="cy" values="10;80" dur="2s" repeatCount="indefinite" />
+        </circle>
+
+        <text x="90" y="75" textAnchor="middle" fill="var(--good)" fontSize="7" fontFamily="var(--font-mono)">ROW RETRIEVED</text>
+      </svg>
+    </div>
+  );
+}
+
 export function SqlDrills() {
   const { loading, sqlSolved, logSqlSolved } = useProgress();
   
@@ -64,7 +99,7 @@ export function SqlDrills() {
   const [statusClass, setStatusClass] = useState('');
   const [dbReady, setDbReady] = useState(false);
 
-  // 1. Initialize Alasql schema
+  // Initialize Alasql schema
   useEffect(() => {
     try {
       if (!window.alasql) {
@@ -195,15 +230,18 @@ export function SqlDrills() {
 
   return (
     <div className="fade-in">
-      <div className="page-header">
+      <div className="page-header scroll-reveal visible">
         <div className="page-title">
           <h1>SQL Drills</h1>
           <p>Practice writing queries against a small sample database with a real-time output validation check.</p>
         </div>
       </div>
 
+      {/* Illustrative index query scan animation */}
+      <SQLDrillsAnimation />
+
       {/* Schema / ER Diagram Box */}
-      <div className="er-diagram-container" style={{ marginBottom: '2.5rem' }}>
+      <div className="er-diagram-container scroll-reveal visible" style={{ marginBottom: '2.5rem' }}>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.08em' }}>Relational Database Schema Layout</div>
         <div className="er-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '1rem' }}>
           <div className="panel" style={{ padding: '16px', margin: 0, background: 'var(--surface-2)' }}>
@@ -246,7 +284,7 @@ export function SqlDrills() {
         </div>
       </div>
 
-      <div className="streak-grid" style={{ gridTemplateColumns: '1fr 2fr' }}>
+      <div className="streak-grid scroll-reveal visible" style={{ gridTemplateColumns: '1fr 2fr' }}>
         {/* Left Side: Drill Select */}
         <div className="panel" style={{ height: 'fit-content', maxHeight: '600px', overflowY: 'auto' }}>
           <h3 style={{ marginBottom: '1rem' }}>Select a Drill</h3>

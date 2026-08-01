@@ -18,7 +18,7 @@ export function TestBank() {
   const [diffFilter, setDiffFilter] = useState('all');
   const [questionOrder, setQuestionOrder] = useState([]);
   
-  // Revealed answers state (local ui state)
+  // Revealed answers state
   const [revealedIds, setRevealedIds] = useState({});
 
   // Exam Mode State
@@ -34,11 +34,9 @@ export function TestBank() {
   const [examTimeUsed, setExamTimeUsed] = useState(0);
 
   useEffect(() => {
-    // Initialize default order
     setQuestionOrder(TEST_QUESTIONS.map((_, idx) => idx));
   }, []);
 
-  // Handle shuffling
   const handleShuffle = () => {
     const arr = [...questionOrder];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -56,7 +54,6 @@ export function TestBank() {
     setRevealedIds({});
   };
 
-  // Grade operation
   const handleGrade = async (qIdx, gradeType) => {
     try {
       await updateGradeState(qIdx.toString(), gradeType);
@@ -66,12 +63,10 @@ export function TestBank() {
     }
   };
 
-  // Exam Mode mechanics
   const handleStartExam = () => {
     const total = TEST_QUESTIONS.length;
     const count = examCountSetting === 'all' ? total : Math.min(examCountSetting, total);
     
-    // Shuffle all questions and select subset
     const shuffledPool = TEST_QUESTIONS.map((_, idx) => idx);
     for (let i = shuffledPool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -86,7 +81,6 @@ export function TestBank() {
     setExamActive(true);
     setExamConfigOpen(false);
 
-    // Start timer interval
     if (examTimerInterval) clearInterval(examTimerInterval);
     const interval = setInterval(() => {
       setExamTimeRemaining(prev => {
@@ -118,7 +112,6 @@ export function TestBank() {
     const timeUsed = (examTime * 60) - examTimeRemaining;
     setExamTimeUsed(timeUsed);
 
-    // Save exam attempt count increment
     try {
       await incrementExamCount();
     } catch (err) {
@@ -126,7 +119,6 @@ export function TestBank() {
     }
   };
 
-  // Cleanup timers
   useEffect(() => {
     return () => {
       if (examTimerInterval) clearInterval(examTimerInterval);
@@ -145,13 +137,11 @@ export function TestBank() {
     );
   }
 
-  // Derive score metrics
   const gradedValues = Object.entries(gradeState);
   const knownCount = gradedValues.filter(([, g]) => g === 'good').length;
   const gradedTotal = gradedValues.length;
   const accuracy = gradedTotal ? Math.round((knownCount / gradedTotal) * 100) : null;
 
-  // Weakest topics evaluation
   const topicStats = {};
   Object.entries(gradeState).forEach(([qIdx, gradeType]) => {
     const q = TEST_QUESTIONS[parseInt(qIdx, 10)];
@@ -169,7 +159,6 @@ export function TestBank() {
     .map(([topic, s]) => ({ topic, pct: Math.round((s.good / s.total) * 100), good: s.good, total: s.total }))
     .sort((a, b) => a.pct - b.pct);
 
-  // Filter bank indices
   const filteredIndices = questionOrder.filter(idx => {
     const q = TEST_QUESTIONS[idx];
     const sourceMatch = sourceFilter === 'all' || q.src === sourceFilter;
@@ -177,28 +166,26 @@ export function TestBank() {
     return sourceMatch && diffMatch;
   });
 
-  // Render Timer
   const formatTimer = (sec) => {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
-  // Exam overlay active mode
   if (examActive) {
     const qIdx = examQuestions[examCurrentIdx];
     const q = TEST_QUESTIONS[qIdx];
 
     return (
       <div className="fade-in">
-        <div className="page-header">
+        <div className="page-header scroll-reveal visible">
           <div className="page-title">
             <h1>Exam Session</h1>
             <p>Complete all questions in the timed block. Review answers at the end.</p>
           </div>
         </div>
 
-        <div className="exam-overlay show" style={{ border: '1px solid var(--accent-line)', background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '24px' }}>
+        <div className="exam-overlay show scroll-reveal visible" style={{ border: '1px solid var(--accent-line)', background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '24px' }}>
           <div className="exam-top">
             <div className="exam-progress-text">
               Question {examCurrentIdx + 1} of {examQuestions.length}
@@ -269,7 +256,6 @@ export function TestBank() {
             )}
           </div>
 
-          {/* Exam progress dots */}
           <div className="exam-dots">
             {examQuestions.map((qi, pos) => {
               const isAnswered = gradeState[qi] !== undefined;
@@ -290,14 +276,13 @@ export function TestBank() {
     );
   }
 
-  // Exam finished/review page
   if (examFinished) {
     const mm = Math.floor(examTimeUsed / 60);
     const ss = examTimeUsed % 60;
 
     return (
       <div className="fade-in">
-        <div className="page-header">
+        <div className="page-header scroll-reveal visible">
           <div className="page-title">
             <h1>Exam Results & Review</h1>
             <p>Grade the questions honestly and read explanation cards below.</p>
@@ -325,7 +310,7 @@ export function TestBank() {
               const isRevealed = !!revealedIds[qi];
               
               return (
-                <div key={qi} className={`qcard ${item.diff === 'advanced' ? 'diff-advanced' : ''}`}>
+                <div key={qi} className={`qcard scroll-reveal visible ${item.diff === 'advanced' ? 'diff-advanced' : ''}`}>
                   <div className="qcard-top">
                     <div className="qcard-tags">
                       <span className={`difftag ${item.diff}`}>{item.diff.toUpperCase()}</span>
@@ -382,10 +367,9 @@ export function TestBank() {
     );
   }
 
-  // Normal view mode
   return (
     <div className="fade-in">
-      <div className="page-header">
+      <div className="page-header scroll-reveal visible">
         <div className="page-title">
           <h1>Test Bank</h1>
           <p>Differentiate RDBMS structures via real questions. Hide answers until you try.</p>
@@ -399,7 +383,7 @@ export function TestBank() {
       )}
 
       {/* Configuration toolbars */}
-      <div className="test-toolbar">
+      <div className="test-toolbar scroll-reveal visible">
         <div>
           <div className="filter-row-label">SOURCE</div>
           <div className="phase-filter">
@@ -421,7 +405,7 @@ export function TestBank() {
         </div>
       </div>
 
-      <div style={{ marginBottom: '28px' }}>
+      <div className="scroll-reveal visible" style={{ marginBottom: '28px' }}>
         <div className="filter-row-label">DIFFICULTY</div>
         <div className="phase-filter">
           <button className={`chip ${diffFilter === 'all' ? 'active' : ''}`} onClick={() => setDiffFilter('all')}>All levels</button>
@@ -432,7 +416,6 @@ export function TestBank() {
         </div>
       </div>
 
-      {/* Exam Mode configuration slider */}
       <div className={`exam-config ${examConfigOpen ? 'show' : ''}`}>
         <div className="exam-config-row">
           <div>
@@ -476,7 +459,10 @@ export function TestBank() {
           const isRevealed = !!revealedIds[idx] || gradeState[idx] !== undefined;
           
           return (
-            <div key={idx} className={`qcard ${item.diff === 'advanced' ? 'diff-advanced' : ''}`}>
+            <div 
+              key={idx} 
+              className={`qcard scroll-reveal visible stagger-item-${(displayIdx % 3) + 1} ${item.diff === 'advanced' ? 'diff-advanced' : ''}`}
+            >
               <div className="qcard-top">
                 <div className="qcard-tags">
                   <span className={`difftag ${item.diff}`}>{item.diff.toUpperCase()}</span>
@@ -529,9 +515,8 @@ export function TestBank() {
         })}
       </div>
 
-      {/* Weakest Topics Dashboard */}
       {sortedWeakTopics.length > 0 && (
-        <div className="panel weak-panel">
+        <div className="panel weak-panel scroll-reveal visible">
           <h3>Where you&apos;re weakest</h3>
           <div id="weak-topics">
             {sortedWeakTopics.slice(0, 5).map(({ topic, pct, good, total }) => (

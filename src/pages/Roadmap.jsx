@@ -2,6 +2,142 @@ import { useState } from 'react';
 import { useProgress } from '../context/ProgressContext';
 import { ROADMAP_NODES } from '../data/trackerData';
 
+// Illustrative database engineering diagrams per phase
+const getPhaseDiagram = (code) => {
+  const styles = {
+    width: '140px',
+    height: '110px',
+    background: 'rgba(255, 255, 255, 0.02)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    padding: '10px',
+    flexShrink: 0
+  };
+  
+  switch(code) {
+    case 'P0': // Foundations
+      return (
+        <svg style={styles} viewBox="0 0 100 80">
+          <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">B-TREE INDEX</text>
+          <rect x="38" y="20" width="24" height="12" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="1"/>
+          <circle cx="50" cy="26" r="2" fill="var(--accent)" />
+          
+          <line x1="50" y1="32" x2="25" y2="52" stroke="var(--border)" strokeWidth="1" strokeDasharray="2,2"/>
+          <line x1="50" y1="32" x2="75" y2="52" stroke="var(--border)" strokeWidth="1" strokeDasharray="2,2"/>
+          
+          <rect x="13" y="52" width="24" height="12" rx="2" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
+          <rect x="63" y="52" width="24" height="12" rx="2" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
+        </svg>
+      );
+    case 'P1': // Relational Theory
+      return (
+        <svg style={styles} viewBox="0 0 100 80">
+          <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">JOIN ALGEBRA</text>
+          <rect x="10" y="22" width="30" height="36" rx="3" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
+          <rect x="10" y="22" width="30" height="10" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="1"/>
+          
+          <rect x="60" y="32" width="30" height="26" rx="3" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
+          <rect x="60" y="32" width="30" height="10" rx="3" fill="var(--good-soft)" stroke="var(--good)" strokeWidth="1"/>
+          
+          <path d="M 40 40 Q 50 35, 60 45" stroke="var(--warn)" strokeWidth="1.2" fill="none"/>
+        </svg>
+      );
+    case 'P2': // Storage & Indexing
+      return (
+        <svg style={styles} viewBox="0 0 100 80">
+          <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">DISK SEGMENTATION</text>
+          <rect x="15" y="20" width="70" height="48" rx="4" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
+          <line x1="15" y1="36" x2="85" y2="36" stroke="var(--border)" strokeWidth="1"/>
+          <line x1="15" y1="52" x2="85" y2="52" stroke="var(--border)" strokeWidth="1"/>
+          <rect x="22" y="24" width="16" height="8" rx="1" fill="var(--good-soft)" stroke="var(--good)" strokeWidth="0.8"/>
+          <rect x="42" y="24" width="16" height="8" rx="1" fill="var(--good-soft)" stroke="var(--good)" strokeWidth="0.8"/>
+          <rect x="22" y="40" width="22" height="8" rx="1" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="0.8"/>
+        </svg>
+      );
+    case 'P3': // Query Execution
+      return (
+        <svg style={styles} viewBox="0 0 100 80">
+          <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">EXECUTION TREE</text>
+          <circle cx="50" cy="24" r="8" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="1"/>
+          <text x="50" y="25" textAnchor="middle" dominantBaseline="middle" fill="var(--text)" fontSize="7">⚙</text>
+          
+          <line x1="50" y1="32" x2="30" y2="54" stroke="var(--border)" strokeWidth="1"/>
+          <line x1="50" y1="32" x2="70" y2="54" stroke="var(--border)" strokeWidth="1"/>
+          
+          <circle cx="30" cy="54" r="8" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
+          <circle cx="70" cy="54" r="8" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
+        </svg>
+      );
+    case 'P4': // Buffer Pools
+      return (
+        <svg style={styles} viewBox="0 0 100 80">
+          <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">LRU CACHE PAGE</text>
+          <rect x="15" y="22" width="18" height="18" rx="2" fill="var(--good-soft)" stroke="var(--good)" strokeWidth="1"/>
+          <rect x="41" y="22" width="18" height="18" rx="2" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
+          <rect x="67" y="22" width="18" height="18" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="1"/>
+          <rect x="15" y="48" width="18" height="18" rx="2" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
+          <rect x="41" y="48" width="18" height="18" rx="2" fill="var(--good-soft)" stroke="var(--good)" strokeWidth="1"/>
+          <rect x="67" y="48" width="18" height="18" rx="2" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
+        </svg>
+      );
+    case 'P5': // Concurrency Control
+      return (
+        <svg style={styles} viewBox="0 0 100 80">
+          <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">2PL LOCK TABLE</text>
+          <rect x="20" y="22" width="24" height="20" rx="3" fill="var(--danger-soft)" stroke="var(--danger)" strokeWidth="1"/>
+          <text x="32" y="32" textAnchor="middle" dominantBaseline="middle" fill="var(--danger)" fontSize="8">🔒</text>
+          <rect x="56" y="22" width="24" height="20" rx="3" fill="var(--good-soft)" stroke="var(--good)" strokeWidth="1"/>
+          <text x="68" y="32" textAnchor="middle" dominantBaseline="middle" fill="var(--good)" fontSize="8">🔓</text>
+          <line x1="44" y1="32" x2="56" y2="32" stroke="var(--border)" strokeWidth="1"/>
+        </svg>
+      );
+    case 'P6': // Crash Recovery
+      return (
+        <svg style={styles} viewBox="0 0 100 80">
+          <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">WAL SYSTEM LOG</text>
+          <rect x="10" y="22" width="80" height="14" rx="2" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
+          <text x="50" y="29" textAnchor="middle" dominantBaseline="middle" fill="var(--text-dim)" fontSize="7">LSN #3202 | TXN_START</text>
+          
+          <rect x="10" y="44" width="80" height="14" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="1"/>
+          <text x="50" y="51" textAnchor="middle" dominantBaseline="middle" fill="var(--text)" fontSize="7">LSN #3203 | COMMIT</text>
+        </svg>
+      );
+    case 'P7': // Distributed Databases
+      return (
+        <svg style={styles} viewBox="0 0 100 80">
+          <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">REPLICAS NETWORK</text>
+          <circle cx="50" cy="22" r="6" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="1"/>
+          <circle cx="25" cy="52" r="6" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
+          <circle cx="75" cy="52" r="6" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
+          
+          <line x1="44" y1="25" x2="29" y2="48" stroke="var(--border)" strokeWidth="1"/>
+          <line x1="56" y1="25" x2="71" y2="48" stroke="var(--border)" strokeWidth="1"/>
+          <line x1="31" y1="52" x2="69" y2="52" stroke="var(--border)" strokeWidth="1" strokeDasharray="1,1"/>
+        </svg>
+      );
+    case 'P8': // System Design Capstone
+      return (
+        <svg style={styles} viewBox="0 0 100 80">
+          <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">CLUSTER MAP</text>
+          <rect x="15" y="22" width="70" height="14" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="1"/>
+          <text x="50" y="29" textAnchor="middle" dominantBaseline="middle" fill="var(--text)" fontSize="7">HAProxy Load Balancer</text>
+          
+          <rect x="10" y="48" width="36" height="18" rx="2" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
+          <text x="28" y="57" textAnchor="middle" dominantBaseline="middle" fill="var(--text-dim)" fontSize="6">Primary DB</text>
+          
+          <rect x="54" y="48" width="36" height="18" rx="2" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
+          <text x="72" y="57" textAnchor="middle" dominantBaseline="middle" fill="var(--text-dim)" fontSize="6">Read Replica</text>
+        </svg>
+      );
+    default:
+      return (
+        <svg style={styles} viewBox="0 0 100 80">
+          <circle cx="50" cy="40" r="10" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
+        </svg>
+      );
+  }
+};
+
 export function Roadmap() {
   const { loading, phaseState, updatePhaseState } = useProgress();
   const [selectedNodeId, setSelectedNodeId] = useState(null);
@@ -34,13 +170,11 @@ export function Roadmap() {
     return { x, y };
   };
 
-  // Helper to determine unlocked state
   const isNodeUnlocked = (p) => {
     if (!p.deps || p.deps.length === 0) return true;
     return p.deps.every(depId => phaseState[depId] === 'done');
   };
 
-  // Dragging event handlers
   const handleMouseDown = (e) => {
     setDragActive(true);
     setDragStart({ x: e.clientX, y: e.clientY });
@@ -99,18 +233,16 @@ export function Roadmap() {
     );
   }
 
-  // Determine current node (first unlocked-but-not-done node)
   const candidates = ROADMAP_NODES.filter(p => phaseState[p.id] !== 'done' && isNodeUnlocked(p));
   candidates.sort((a, b) => (a.lane - b.lane) || (a.col - b.col));
   const currentId = candidates.length ? candidates[0].id : -1;
 
-  // Selected node details
   const selectedNode = ROADMAP_NODES.find(p => p.id === selectedNodeId);
   const doneCount = ROADMAP_NODES.filter(p => phaseState[p.id] === 'done').length;
 
   return (
     <div className="fade-in" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-      <div className="page-header">
+      <div className="page-header scroll-reveal visible">
         <div className="page-title">
           <h1>Mastery Roadmap</h1>
           <p>Explore the DBMS dependency tree. Complete phases to unlock advanced branches.</p>
@@ -127,7 +259,7 @@ export function Roadmap() {
       )}
 
       {/* SVG Container */}
-      <div className="flow-wrap">
+      <div className="flow-wrap scroll-reveal visible">
         <div className="flow-toolbar">
           <div className="flow-toolbar-left">
             <div className="flow-legend">
@@ -186,7 +318,7 @@ export function Roadmap() {
             {/* Group wrapper for pan & zoom */}
             <g transform={`translate(${panX}, ${panY}) scale(${zoom})`}>
               
-              {/* Edges/Paths */}
+              {/* Edges/Paths connected column-by-column left-to-right delay */}
               {ROADMAP_NODES.map(p => {
                 return p.deps.map(depId => {
                   const from = ROADMAP_NODES.find(ph => ph.id === depId);
@@ -208,6 +340,7 @@ export function Roadmap() {
                       d={`M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`}
                       className={pathClass}
                       markerEnd={marker}
+                      style={{ animationDelay: `${from.col * 0.3}s` }}
                     />
                   );
                 });
@@ -261,7 +394,7 @@ export function Roadmap() {
                 );
               })()}
 
-              {/* Nodes */}
+              {/* Nodes with scale staggered animations */}
               {ROADMAP_NODES.map(p => {
                 const { x, y } = getNodeXY(p);
                 const status = phaseState[p.id] || 'locked';
@@ -280,12 +413,16 @@ export function Roadmap() {
                     key={p.id} 
                     className={nodeClass}
                     onClick={() => setSelectedNodeId(selectedNodeId === p.id ? null : p.id)}
+                    style={{ 
+                      animation: 'slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards', 
+                      animationDelay: `${p.col * 0.25}s`,
+                      opacity: 0 
+                    }}
                   >
                     <circle className="fc-pulse" cx={x + NODE_W / 2} cy={y + NODE_H / 2} r={34} />
                     <rect className="fc-box" x={x} y={y} width={NODE_W} height={NODE_H} rx={6} />
                     <text x={x + 14} y={y + 20} className="fc-code">{p.code}{p.optional ? ' · OPT' : ''}</text>
                     
-                    {/* Render split title lines */}
                     {p.name.split(' ').map((word, wIdx, words) => {
                       const mid = Math.ceil(words.length / 2);
                       const line1 = words.slice(0, mid).join(' ');
@@ -315,47 +452,54 @@ export function Roadmap() {
 
         <div className="flow-hint">Pinch or scroll to zoom · Click-drag to pan · Click any node for details</div>
         
-        {/* Detail drawer */}
+        {/* Detail drawer (with illustrative diagrams) */}
         <div className={`flow-detail ${selectedNode ? 'open' : ''}`}>
           {selectedNode && (
-            <div className="flow-detail-inner">
-              <div className="fd-top">
-                <div className="fd-title">
-                  <span className="fd-code">{selectedNode.code}</span> {selectedNode.name}
-                  {selectedNode.optional && <span className="fd-code" style={{ color: 'var(--purple)', borderColor: 'var(--purple)' }}>OPTIONAL</span>}
-                </div>
-                <div className="fd-time">{selectedNode.time}</div>
-              </div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: '15px', color: 'var(--accent)', fontStyle: 'italic', marginBottom: '14px' }}>
-                &quot;{selectedNode.punchline}&quot;
-              </div>
-              <div className="fd-topics">
-                <b>Topics:</b> {selectedNode.topics}
-              </div>
-              <div className="fd-deps">
-                {selectedNode.deps.length > 0 ? (
-                  selectedNode.deps.map(depId => {
-                    const dep = ROADMAP_NODES.find(ph => ph.id === depId);
-                    return (
-                      <span key={depId} className="dep-chip">
-                        {phaseState[depId] === 'done' ? '✓' : '○'} {dep.code} {dep.name}
-                      </span>
-                    );
-                  })
-                ) : (
-                  <span className="dep-chip">No prerequisites</span>
-                )}
-              </div>
+            <div className="flow-detail-inner" style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
               
-              <div className="fd-actions">
-                <button 
-                  className={`fd-btn mark-done ${phaseState[selectedNode.id] === 'done' ? 'is-done' : ''} ${!isNodeUnlocked(selectedNode) && phaseState[selectedNode.id] !== 'done' ? 'locked' : ''}`}
-                  onClick={() => handleUpdateStatus(selectedNode.id, phaseState[selectedNode.id], !isNodeUnlocked(selectedNode))}
-                  disabled={!isNodeUnlocked(selectedNode) && phaseState[selectedNode.id] !== 'done'}
-                >
-                  {phaseState[selectedNode.id] === 'done' ? '✓ Marked complete' : (isNodeUnlocked(selectedNode) ? 'Mark phase complete' : 'Locked — finish prerequisites first')}
-                </button>
+              {/* Illustrative Diagram block */}
+              {getPhaseDiagram(selectedNode.code)}
+
+              <div style={{ flexGrow: 1 }}>
+                <div className="fd-top">
+                  <div className="fd-title">
+                    <span className="fd-code">{selectedNode.code}</span> {selectedNode.name}
+                    {selectedNode.optional && <span className="fd-code" style={{ color: 'var(--purple)', borderColor: 'var(--purple)' }}>OPTIONAL</span>}
+                  </div>
+                  <div className="fd-time">{selectedNode.time}</div>
+                </div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '14px', color: 'var(--accent)', fontStyle: 'italic', marginBottom: '8px' }}>
+                  &quot;{selectedNode.punchline}&quot;
+                </div>
+                <div className="fd-topics" style={{ fontSize: '13px', color: 'var(--text-dim)' }}>
+                  <b>Topics:</b> {selectedNode.topics}
+                </div>
+                <div className="fd-deps" style={{ marginTop: '8px' }}>
+                  {selectedNode.deps.length > 0 ? (
+                    selectedNode.deps.map(depId => {
+                      const dep = ROADMAP_NODES.find(ph => ph.id === depId);
+                      return (
+                        <span key={depId} className="dep-chip" style={{ fontSize: '11px', padding: '2px 8px' }}>
+                          {phaseState[depId] === 'done' ? '✓' : '○'} {dep.code} {dep.name}
+                        </span>
+                      );
+                    })
+                  ) : (
+                    <span className="dep-chip" style={{ fontSize: '11px', padding: '2px 8px' }}>No prerequisites</span>
+                  )}
+                </div>
+                
+                <div className="fd-actions" style={{ marginTop: '16px' }}>
+                  <button 
+                    className={`fd-btn mark-done ${phaseState[selectedNode.id] === 'done' ? 'is-done' : ''} ${!isNodeUnlocked(selectedNode) && phaseState[selectedNode.id] !== 'done' ? 'locked' : ''}`}
+                    onClick={() => handleUpdateStatus(selectedNode.id, phaseState[selectedNode.id], !isNodeUnlocked(selectedNode))}
+                    disabled={!isNodeUnlocked(selectedNode) && phaseState[selectedNode.id] !== 'done'}
+                  >
+                    {phaseState[selectedNode.id] === 'done' ? '✓ Marked complete' : (isNodeUnlocked(selectedNode) ? 'Mark phase complete' : 'Locked — finish prerequisites first')}
+                  </button>
+                </div>
               </div>
+
             </div>
           )}
         </div>

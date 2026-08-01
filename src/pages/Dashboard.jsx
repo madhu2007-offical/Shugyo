@@ -1,10 +1,104 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useProgress } from '../context/ProgressContext';
 import { calculateStreak } from '../utils/streakCalculator';
 import { evaluateAchievements } from '../utils/trophyEvaluator';
 import { QUOTES, PRESSURE_QUOTES, TROPHIES, SQL_DRILLS, TEST_QUESTIONS } from '../data/trackerData';
 import { BookOpen, CheckSquare, Award, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+// Custom Hook to count up numbers smoothly on load
+function useCountUp(endVal, duration = 800) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let start = 0;
+    const end = parseInt(endVal, 10);
+    if (isNaN(end) || end === 0) {
+      setCount(0);
+      return;
+    }
+    const totalTicks = 30;
+    const stepTime = Math.abs(Math.floor(duration / totalTicks));
+    const increment = Math.ceil(end / totalTicks);
+    const timer = setInterval(() => {
+      start += increment;
+      if (start >= end) {
+        setCount(end);
+        clearInterval(timer);
+      } else {
+        setCount(start);
+      }
+    }, stepTime);
+    return () => clearInterval(timer);
+  }, [endVal, duration]);
+  return count;
+}
+
+// Particle Canvas mesh flow for database connection visualizer background
+function ParticleCanvas() {
+  useEffect(() => {
+    const canvas = document.getElementById('hero-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animationFrameId;
+    
+    const resize = () => {
+      canvas.width = canvas.parentElement.offsetWidth;
+      canvas.height = canvas.parentElement.offsetHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+    
+    const particles = [];
+    for(let i=0; i<35; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.35,
+        vy: (Math.random() - 0.5) * 0.35,
+        r: Math.random() * 2 + 1
+      });
+    }
+    
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'rgba(99, 102, 241, 0.15)';
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.03)';
+      
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+        
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      
+      for(let i=0; i<particles.length; i++) {
+        for(let j=i+1; j<particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < 100) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+      animationFrameId = requestAnimationFrame(draw);
+    };
+    draw();
+    
+    return () => {
+      window.removeEventListener('resize', resize);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+  return <canvas id="hero-canvas" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }} />;
+}
 
 export function Dashboard() {
   const { 
@@ -21,6 +115,18 @@ export function Dashboard() {
   // Rotating quote indices
   const [quoteIdx, setQuoteIdx] = useState(0);
   const [pressureIdx, setPressureIdx] = useState(0);
+
+  // Mouse trail variables
+  const heroRef = useRef(null);
+
+  const handleMouseMove = (e) => {
+    if (!heroRef.current) return;
+    const rect = heroRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    heroRef.current.style.setProperty('--mouse-x', `${x}px`);
+    heroRef.current.style.setProperty('--mouse-y', `${y}px`);
+  };
 
   // Quote rotation intervals
   useEffect(() => {
@@ -49,39 +155,26 @@ export function Dashboard() {
     await toggleStreakDay(todayStr);
   };
 
-  if (loading) {
-    return (
-      <div className="fullscreen-loader">
-        <div className="loader-card">
-          <div className="spinner"></div>
-          <h2>修行 SHUGYO</h2>
-          <p>Loading DBMS master console...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Map state to what metrics calculators expect
+  // 1. Data compilation mappings
   const progressList = [
     ...Object.entries(phaseState).map(([nodeId, status]) => ({ node_id: nodeId, status })),
     ...sqlSolved.map(drillIdx => ({ node_id: `drill_${drillIdx}`, status: 'done' }))
   ];
-
   const checklistList = checklistState.map(itemId => ({ item_id: itemId, completed: true }));
   const questionGradesList = Object.entries(gradeState).map(([qId, grade]) => ({ question_id: qId, grade }));
   const testAttemptsList = Array(examCount).fill({ test_id: 'exam_mode' });
 
-  // Derive counts
-  const completedPhasesCount = Object.values(phaseState).filter(status => status === 'done').length;
-  const completedChecklistCount = checklistState.length;
+  // 2. Count metrics calculations
+  const rawPhasesCount = Object.values(phaseState).filter(status => status === 'done').length;
+  const rawChecklistCount = checklistState.length;
   
   // Format streaks for streak calculator
   const streakObjects = streakDays.map(day => ({ activity_date: day }));
-  const streakCount = calculateStreak(streakObjects);
+  const streakCountRaw = calculateStreak(streakObjects);
   
-  // Calculate longest streak
+  // Longest streak
   const sortedStreakDates = [...streakDays].sort();
-  let longestStreak = 0;
+  let rawLongestStreak = 0;
   let currentRun = 0;
   let prevDate = null;
   sortedStreakDates.forEach(ds => {
@@ -92,7 +185,7 @@ export function Dashboard() {
     } else {
       currentRun = 1;
     }
-    longestStreak = Math.max(longestStreak, currentRun);
+    rawLongestStreak = Math.max(rawLongestStreak, currentRun);
     prevDate = d;
   });
 
@@ -102,56 +195,64 @@ export function Dashboard() {
     checklistItems: checklistList,
     questionGrades: questionGradesList,
     testAttempts: testAttemptsList,
-    streakCount
+    streakCount: streakCountRaw
   });
-  const unlockedAchievementCount = Object.values(achievementStatus).filter(Boolean).length;
+  const rawAchievementCount = Object.values(achievementStatus).filter(Boolean).length;
 
-  // 2. Leetcode-style statistics compilation
+  // Easy / Medium / Hard Solved calculation
   const easyTotal = 28;
   const mediumTotal = 27;
   const hardTotal = 38;
   const grandTotal = easyTotal + mediumTotal + hardTotal;
 
-  // Easy / Medium / Hard Solved calculation
-  let solvedEasy = 0;
-  let solvedMedium = 0;
-  let solvedHard = 0;
+  let rawSolvedEasy = 0;
+  let rawSolvedMedium = 0;
+  let rawSolvedHard = 0;
 
-  // Process Solved Questions
   questionGradesList.forEach(item => {
     if (item.grade === 'good') {
       const q = TEST_QUESTIONS[parseInt(item.question_id, 10)];
       if (q) {
-        if (q.diff === 'easy') solvedEasy++;
-        else if (q.diff === 'medium') solvedMedium++;
-        else if (q.diff === 'hard' || q.diff === 'advanced') solvedHard++;
+        if (q.diff === 'easy') rawSolvedEasy++;
+        else if (q.diff === 'medium') rawSolvedMedium++;
+        else if (q.diff === 'hard' || q.diff === 'advanced') rawSolvedHard++;
       }
     }
   });
 
-  // Process Solved SQL Drills
   sqlSolved.forEach(drillIdx => {
     const d = SQL_DRILLS[drillIdx];
     if (d) {
-      if (d.difficulty === 'easy') solvedEasy++;
-      else if (d.difficulty === 'medium') solvedMedium++;
-      else if (d.difficulty === 'hard') solvedHard++;
+      if (d.difficulty === 'easy') rawSolvedEasy++;
+      else if (d.difficulty === 'medium') rawSolvedMedium++;
+      else if (d.difficulty === 'hard') rawSolvedHard++;
     }
   });
 
-  const solvedTotal = solvedEasy + solvedMedium + solvedHard;
+  const rawSolvedTotal = rawSolvedEasy + rawSolvedMedium + rawSolvedHard;
+
+  // 3. Count Up Animated Tweens
+  const completedPhasesCount = useCountUp(rawPhasesCount);
+  const completedChecklistCount = useCountUp(rawChecklistCount);
+  const streakCount = useCountUp(streakCountRaw);
+  const longestStreak = useCountUp(rawLongestStreak);
+  const unlockedAchievementCount = useCountUp(rawAchievementCount);
+  const solvedEasy = useCountUp(rawSolvedEasy);
+  const solvedMedium = useCountUp(rawSolvedMedium);
+  const solvedHard = useCountUp(rawSolvedHard);
+  const solvedTotal = useCountUp(rawSolvedTotal);
 
   // Circular Stats SVG Ring calculations
   const radius = 50;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - ((solvedTotal / grandTotal) * circumference);
 
-  // 3. Deterministic Daily Challenge
+  // Deterministic Daily Challenge
   const dailyDrillIdx = dayOfYearIndex() % SQL_DRILLS.length;
   const dailyDrill = SQL_DRILLS[dailyDrillIdx];
   const isDailySolved = sqlSolved.includes(dailyDrillIdx);
 
-  // 4. Heatmap calculations (LeetCode style submissions shades of green)
+  // Heatmap calculations
   const todayKey = toDateStr(new Date());
   const isDoneToday = streakDays.includes(todayKey);
   const DAYS = 119;
@@ -160,7 +261,6 @@ export function Dashboard() {
   startDay.setDate(startDay.getDate() - (DAYS - 1));
   const startDow = startDay.getDay();
 
-  // Add empty filler cells for alignment
   for (let i = 0; i < startDow; i++) {
     heatmapCells.push({ empty: true, id: `filler-${i}` });
   }
@@ -171,7 +271,6 @@ export function Dashboard() {
     const key = toDateStr(currentDay);
     const hasLog = streakDays.includes(key);
     
-    // Simple active/inactive mapping for single-user JSONB streaks
     let intensityClass = '';
     if (hasLog) intensityClass = 'lvl4';
 
@@ -192,6 +291,18 @@ export function Dashboard() {
     return Math.floor(diff / oneDay);
   }
 
+  if (loading) {
+    return (
+      <div className="fullscreen-loader">
+        <div className="loader-card">
+          <div className="spinner"></div>
+          <h2>修行 SHUGYO</h2>
+          <p>Loading DBMS master console...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fade-in">
       <div className="page-header">
@@ -201,30 +312,44 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* Hero section with particle background, pointer light flow and animations */}
+      <section 
+        className="hero scroll-reveal visible" 
+        ref={heroRef}
+        onMouseMove={handleMouseMove}
+        style={{ 
+          padding: '2.5rem', 
+          borderRadius: 'var(--radius)', 
+          background: 'radial-gradient(circle 240px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(99, 102, 241, 0.08), transparent 75%), var(--surface)', 
+          border: '1px solid var(--border)',
+          position: 'relative',
+          overflow: 'hidden',
+          marginBottom: '2.5rem'
+        }}
+      >
+        <ParticleCanvas />
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div className="eyebrow" style={{ animation: 'slide-up 0.5s ease forwards' }}>
+            <span className="dot"></span> PERSONAL CONSOLE · BASIC → ADVANCED
+          </div>
+          <h1 className="hero-title" style={{ fontSize: 'clamp(28px, 4vw, 48px)', animation: 'slide-up 0.7s ease forwards' }}>
+            Stop memorizing SQL. <span style={{ color: 'var(--accent)' }}>Start understanding the engine.</span>
+          </h1>
+          <p className="hero-sub" style={{ fontSize: '15px', marginTop: '10px', animation: 'slide-up 0.9s ease forwards', color: 'var(--text-dim)' }}>
+            A self-paced mastery track through relational theory, storage internals, concurrency, and distributed systems. 
+            All progress is securely synchronized to your Supabase account.
+          </p>
 
-
-      {/* Hero section */}
-      <section className="hero" style={{ padding: '0 0 20px 0' }}>
-        <div className="eyebrow">
-          <span className="dot"></span> PERSONAL CONSOLE · BASIC → ADVANCED
-        </div>
-        <h1 className="hero-title" style={{ fontSize: 'clamp(28px, 4vw, 48px)' }}>
-          Stop memorizing SQL. <span style={{ color: 'var(--accent)' }}>Start understanding the engine.</span>
-        </h1>
-        <p className="hero-sub" style={{ fontSize: '15px', marginTop: '10px' }}>
-          A self-paced mastery track through relational theory, storage internals, concurrency, and distributed systems. 
-          All progress is securely synchronized to your Supabase account.
-        </p>
-
-        <div className="quote-box" style={{ marginTop: '24px' }}>
-          <div className="quote-text">{QUOTES[quoteIdx].text}</div>
-          <div className="quote-author">— {QUOTES[quoteIdx].author}</div>
+          <div className="quote-box" style={{ marginTop: '24px', animation: 'slide-up 1.1s ease forwards' }}>
+            <div className="quote-text">{QUOTES[quoteIdx].text}</div>
+            <div className="quote-author">— {QUOTES[quoteIdx].author}</div>
+          </div>
         </div>
       </section>
 
-      {/* Reality Check Pressure Banner */}
-      <div className="pressure-banner" style={{ marginBottom: '24px' }}>
-        <div className="pressure-inner">
+      {/* Reality Check Pressure Banner (Syncd pulse background) */}
+      <div className="pressure-banner scroll-reveal" style={{ marginBottom: '24px' }}>
+        <div className="pressure-inner" style={{ transition: 'background-color 0.8s ease' }}>
           <div className="pressure-quote-wrap">
             <div className="pressure-eyebrow">
               <span className="pdot"></span> REALITY CHECK
@@ -243,7 +368,7 @@ export function Dashboard() {
       </div>
 
       {/* Leetcode and Daily Challenge Row */}
-      <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+      <div className="dashboard-grid scroll-reveal stagger-item-1" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
         {/* LeetCode Style Mastery Ring */}
         <div className="panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <h3 style={{ marginBottom: '1.5rem' }}>Mastery Progress</h3>
@@ -344,7 +469,7 @@ export function Dashboard() {
       </div>
 
       {/* Stats Widgets */}
-      <div className="dashboard-grid" style={{ marginBottom: '1.5rem' }}>
+      <div className="dashboard-grid scroll-reveal stagger-item-2" style={{ marginBottom: '1.5rem' }}>
         <div className="stat-card">
           <div className="stat-icon purple">
             <BookOpen size={22} />
@@ -377,7 +502,7 @@ export function Dashboard() {
       </div>
 
       {/* Consistency Section */}
-      <div className="panel" style={{ marginTop: '1rem' }}>
+      <div className="panel scroll-reveal stagger-item-3" style={{ marginTop: '1rem' }}>
         <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
           Submission Consistency
         </h3>
@@ -386,7 +511,7 @@ export function Dashboard() {
             <div className="streak-numbers">
               <div className="streak-num-block">
                 <div className="streak-big">
-                  <span className="flame">🔥</span>
+                  <span style={{ fontSize: '24px', marginRight: '4px' }}>🔥</span>
                   <span>{streakCount}</span>
                 </div>
                 <div className="streak-cap">CURRENT STREAK (DAYS)</div>

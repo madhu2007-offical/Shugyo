@@ -1,4 +1,5 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, 
@@ -14,6 +15,8 @@ import {
 export function Layout() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   const handleSignOut = async () => {
     await signOut();
@@ -41,8 +44,50 @@ export function Layout() {
     { path: '/achievements', label: 'Achievements', icon: <Award size={20} /> },
   ];
 
+  // Global scroll listener for progress indicator and parallax offsets
+  useEffect(() => {
+    const handleScroll = () => {
+      const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (totalScroll > 0) {
+        const progress = (window.scrollY / totalScroll) * 100;
+        setScrollProgress(progress);
+      }
+      
+      // Pass scroll parallax offset to CSS
+      document.documentElement.style.setProperty('--scroll-offset', `${window.scrollY * 0.15}px`);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Global intersection observer to trigger scroll-reveals on page transitions
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.05 });
+
+    // Set a slight timeout to let the page components mount fully
+    const timer = setTimeout(() => {
+      const elements = document.querySelectorAll('.scroll-reveal');
+      elements.forEach(el => observer.observe(el));
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [pathname]);
+
   return (
     <div className="app-layout">
+      {/* Scroll progress bar */}
+      <div className="scroll-progress-bar" style={{ width: `${scrollProgress}%` }} />
+
       <aside className="sidebar">
         <div>
           <div className="sidebar-header">
