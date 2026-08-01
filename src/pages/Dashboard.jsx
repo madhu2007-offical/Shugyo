@@ -39,9 +39,11 @@ function ParticleCanvas() {
     const ctx = canvas.getContext('2d');
     let animationFrameId;
     
+    const parent = canvas.parentElement;
+    if (!parent) return;
     const resize = () => {
-      canvas.width = canvas.parentElement.offsetWidth;
-      canvas.height = canvas.parentElement.offsetHeight;
+      canvas.width = parent.offsetWidth;
+      canvas.height = parent.offsetHeight;
     };
     resize();
     window.addEventListener('resize', resize);
@@ -406,7 +408,7 @@ export function Dashboard() {
                   cy="60" 
                   r="50" 
                   fill="none" 
-                  stroke="var(--lc-easy)" 
+                  stroke="var(--accent)" 
                   strokeWidth="8" 
                   strokeDasharray={circumference}
                   strokeDashoffset={strokeDashoffset}
