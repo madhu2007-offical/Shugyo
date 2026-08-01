@@ -82,7 +82,6 @@ body::before {
 
 /* App shell layout */
 .app-layout {
-  display: flex;
   min-height: 100vh;
 }
 
