@@ -6,7 +6,6 @@ import { QUOTES, PRESSURE_QUOTES, TROPHIES, SQL_DRILLS, TEST_QUESTIONS } from '.
 import { BookOpen, CheckSquare, Award, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-// Custom Hook to count up numbers smoothly on load
 function useCountUp(endVal, duration = 800) {
   const [count, setCount] = useState(0);
   useEffect(() => {
@@ -33,7 +32,6 @@ function useCountUp(endVal, duration = 800) {
   return count;
 }
 
-// Particle Canvas mesh flow for database connection visualizer background
 function ParticleCanvas() {
   useEffect(() => {
     const canvas = document.getElementById('hero-canvas');
@@ -112,11 +110,9 @@ export function Dashboard() {
     toggleStreakDay 
   } = useProgress();
 
-  // Rotating quote indices
   const [quoteIdx, setQuoteIdx] = useState(0);
   const [pressureIdx, setPressureIdx] = useState(0);
 
-  // Mouse trail variables
   const heroRef = useRef(null);
 
   const handleMouseMove = (e) => {
@@ -128,7 +124,6 @@ export function Dashboard() {
     heroRef.current.style.setProperty('--mouse-y', `${y}px`);
   };
 
-  // Quote rotation intervals
   useEffect(() => {
     const qTimer = setInterval(() => {
       setQuoteIdx(prev => (prev + 1) % QUOTES.length);
@@ -155,7 +150,6 @@ export function Dashboard() {
     await toggleStreakDay(todayStr);
   };
 
-  // 1. Data compilation mappings
   const progressList = [
     ...Object.entries(phaseState).map(([nodeId, status]) => ({ node_id: nodeId, status })),
     ...sqlSolved.map(drillIdx => ({ node_id: `drill_${drillIdx}`, status: 'done' }))
@@ -164,15 +158,12 @@ export function Dashboard() {
   const questionGradesList = Object.entries(gradeState).map(([qId, grade]) => ({ question_id: qId, grade }));
   const testAttemptsList = Array(examCount).fill({ test_id: 'exam_mode' });
 
-  // 2. Count metrics calculations
   const rawPhasesCount = Object.values(phaseState).filter(status => status === 'done').length;
   const rawChecklistCount = checklistState.length;
   
-  // Format streaks for streak calculator
   const streakObjects = streakDays.map(day => ({ activity_date: day }));
   const streakCountRaw = calculateStreak(streakObjects);
   
-  // Longest streak
   const sortedStreakDates = [...streakDays].sort();
   let rawLongestStreak = 0;
   let currentRun = 0;
@@ -189,7 +180,6 @@ export function Dashboard() {
     prevDate = d;
   });
 
-  // Evaluate achievements
   const achievementStatus = evaluateAchievements({
     progress: progressList,
     checklistItems: checklistList,
@@ -199,7 +189,6 @@ export function Dashboard() {
   });
   const rawAchievementCount = Object.values(achievementStatus).filter(Boolean).length;
 
-  // Easy / Medium / Hard Solved calculation
   const easyTotal = 28;
   const mediumTotal = 27;
   const hardTotal = 38;
@@ -231,7 +220,6 @@ export function Dashboard() {
 
   const rawSolvedTotal = rawSolvedEasy + rawSolvedMedium + rawSolvedHard;
 
-  // 3. Count Up Animated Tweens
   const completedPhasesCount = useCountUp(rawPhasesCount);
   const completedChecklistCount = useCountUp(rawChecklistCount);
   const streakCount = useCountUp(streakCountRaw);
@@ -242,17 +230,14 @@ export function Dashboard() {
   const solvedHard = useCountUp(rawSolvedHard);
   const solvedTotal = useCountUp(rawSolvedTotal);
 
-  // Circular Stats SVG Ring calculations
   const radius = 50;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - ((solvedTotal / grandTotal) * circumference);
 
-  // Deterministic Daily Challenge
   const dailyDrillIdx = dayOfYearIndex() % SQL_DRILLS.length;
   const dailyDrill = SQL_DRILLS[dailyDrillIdx];
   const isDailySolved = sqlSolved.includes(dailyDrillIdx);
 
-  // Heatmap calculations
   const todayKey = toDateStr(new Date());
   const isDoneToday = streakDays.includes(todayKey);
   const DAYS = 119;
@@ -305,22 +290,22 @@ export function Dashboard() {
 
   return (
     <div className="fade-in">
-      <div className="page-header">
+      <div className="page-header reveal visible">
         <div className="page-title">
           <h1>Mastery Console</h1>
           <p>LeetCode-style daily progress checks and DBMS achievements.</p>
         </div>
       </div>
 
-      {/* Hero section with particle background, pointer light flow and animations */}
+      {/* Hero section with cursor glow, particle flow, and staggered fades */}
       <section 
-        className="hero scroll-reveal visible" 
+        className="hero reveal visible" 
         ref={heroRef}
         onMouseMove={handleMouseMove}
         style={{ 
           padding: '2.5rem', 
           borderRadius: 'var(--radius)', 
-          background: 'radial-gradient(circle 240px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(99, 102, 241, 0.08), transparent 75%), var(--surface)', 
+          background: 'radial-gradient(circle 420px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(99, 102, 241, 0.08), transparent 75%), var(--surface)', 
           border: '1px solid var(--border)',
           position: 'relative',
           overflow: 'hidden',
@@ -328,27 +313,60 @@ export function Dashboard() {
         }}
       >
         <ParticleCanvas />
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <div className="eyebrow" style={{ animation: 'slide-up 0.5s ease forwards' }}>
+        <div className="reveal-stagger in" style={{ position: 'relative', zIndex: 1 }}>
+          <div className="eyebrow">
             <span className="dot"></span> PERSONAL CONSOLE · BASIC → ADVANCED
           </div>
-          <h1 className="hero-title" style={{ fontSize: 'clamp(28px, 4vw, 48px)', animation: 'slide-up 0.7s ease forwards' }}>
+          <h1 className="hero-title" style={{ fontSize: 'clamp(28px, 4vw, 48px)' }}>
             Stop memorizing SQL. <span style={{ color: 'var(--accent)' }}>Start understanding the engine.</span>
           </h1>
-          <p className="hero-sub" style={{ fontSize: '15px', marginTop: '10px', animation: 'slide-up 0.9s ease forwards', color: 'var(--text-dim)' }}>
+          <p className="hero-sub" style={{ fontSize: '15px', marginTop: '10px', color: 'var(--text-dim)' }}>
             A self-paced mastery track through relational theory, storage internals, concurrency, and distributed systems. 
             All progress is securely synchronized to your Supabase account.
           </p>
 
-          <div className="quote-box" style={{ marginTop: '24px', animation: 'slide-up 1.1s ease forwards' }}>
+          <div className="quote-box" style={{ marginTop: '24px' }}>
             <div className="quote-text">{QUOTES[quoteIdx].text}</div>
             <div className="quote-author">— {QUOTES[quoteIdx].author}</div>
+          </div>
+
+          {/* 3. Animated Hero SVG Diagram (Additive query scanning B+ Tree details) */}
+          <div className="reveal in" style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center' }}>
+            <svg width="460" height="90" viewBox="0 0 460 90" style={{ background: 'rgba(9, 11, 15, 0.6)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px' }}>
+              <circle cx="80" cy="80" r="1.5" fill="var(--accent)" className="drifting-particle" style={{ animationDelay: '0s' }} />
+              <circle cx="210" cy="80" r="1" fill="var(--good)" className="drifting-particle" style={{ animationDelay: '0.8s' }} />
+              <circle cx="340" cy="80" r="1.5" fill="var(--accent)" className="drifting-particle" style={{ animationDelay: '1.6s' }} />
+              
+              <g className="fade-scale-node" style={{ animationDelay: '0.2s' }}>
+                <rect x="15" y="25" width="80" height="36" rx="4" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1" />
+                <text x="55" y="47" textAnchor="middle" fill="var(--text)" fontSize="8.5" fontFamily="var(--font-mono)">SELECT *</text>
+              </g>
+              
+              <path d="M 95 43 L 155 43" className="draw-path-line" style={{ stroke: 'var(--accent)', strokeWidth: '1.2', fill: 'none' }} />
+              
+              <g className="fade-scale-node" style={{ animationDelay: '0.8s' }}>
+                <rect x="155" y="25" width="110" height="36" rx="4" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="1" />
+                <text x="210" y="47" textAnchor="middle" fill="var(--text)" fontSize="8.5" fontFamily="var(--font-mono)">B+ TREE INDEX</text>
+              </g>
+              
+              <circle cx="210" cy="43" r="3.5" fill="var(--good)">
+                <animate attributeName="r" values="3;5;3" dur="1.5s" repeatCount="indefinite" />
+              </circle>
+              
+              <path d="M 265 43 L 325 43" className="draw-path-line" style={{ stroke: 'var(--accent)', strokeWidth: '1.2', fill: 'none' }} />
+              
+              <g className="fade-scale-node" style={{ animationDelay: '1.4s' }}>
+                <rect x="325" y="25" width="120" height="36" rx="4" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1" />
+                <text x="385" y="42" textAnchor="middle" fill="var(--text)" fontSize="8" fontFamily="var(--font-mono)">STORAGE PAGE</text>
+                <text x="385" y="52" textAnchor="middle" fill="var(--good)" fontSize="7" fontFamily="var(--font-mono)">[ 1 row / 0.2ms ]</text>
+              </g>
+            </svg>
           </div>
         </div>
       </section>
 
-      {/* Reality Check Pressure Banner (Syncd pulse background) */}
-      <div className="pressure-banner scroll-reveal" style={{ marginBottom: '24px' }}>
+      {/* Reality Check Pressure Banner */}
+      <div className="pressure-banner reveal" style={{ marginBottom: '24px' }}>
         <div className="pressure-inner" style={{ transition: 'background-color 0.8s ease' }}>
           <div className="pressure-quote-wrap">
             <div className="pressure-eyebrow">
@@ -368,7 +386,7 @@ export function Dashboard() {
       </div>
 
       {/* Leetcode and Daily Challenge Row */}
-      <div className="dashboard-grid scroll-reveal stagger-item-1" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+      <div className="dashboard-grid reveal" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
         {/* LeetCode Style Mastery Ring */}
         <div className="panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <h3 style={{ marginBottom: '1.5rem' }}>Mastery Progress</h3>
@@ -398,7 +416,8 @@ export function Dashboard() {
                 />
               </svg>
               <div className="lc-circle-text">
-                <span className="lc-circle-num">{solvedTotal}</span>
+                {/* 5. Animated Counter stats triggers */}
+                <span className="lc-circle-num motion-counter" data-target={rawSolvedTotal}>{solvedTotal}</span>
                 <span className="lc-circle-sub">Solved / {grandTotal}</span>
               </div>
             </div>
@@ -407,7 +426,7 @@ export function Dashboard() {
               <div className="lc-bar-row">
                 <div className="lc-bar-header easy">
                   <span>Easy</span>
-                  <span className="count">{solvedEasy}/{easyTotal}</span>
+                  <span className="count motion-counter" data-target={rawSolvedEasy} data-suffix={`/${easyTotal}`}>{solvedEasy}/{easyTotal}</span>
                 </div>
                 <div className="lc-bar-track">
                   <div className="lc-bar-fill easy" style={{ width: `${(solvedEasy / easyTotal) * 100}%` }}></div>
@@ -417,7 +436,7 @@ export function Dashboard() {
               <div className="lc-bar-row">
                 <div className="lc-bar-header medium">
                   <span>Medium</span>
-                  <span className="count">{solvedMedium}/{mediumTotal}</span>
+                  <span className="count motion-counter" data-target={rawSolvedMedium} data-suffix={`/${mediumTotal}`}>{solvedMedium}/{mediumTotal}</span>
                 </div>
                 <div className="lc-bar-track">
                   <div className="lc-bar-fill medium" style={{ width: `${(solvedMedium / mediumTotal) * 100}%` }}></div>
@@ -427,7 +446,7 @@ export function Dashboard() {
               <div className="lc-bar-row">
                 <div className="lc-bar-header hard">
                   <span>Hard</span>
-                  <span className="count">{solvedHard}/{hardTotal}</span>
+                  <span className="count motion-counter" data-target={rawSolvedHard} data-suffix={`/${hardTotal}`}>{solvedHard}/{hardTotal}</span>
                 </div>
                 <div className="lc-bar-track">
                   <div className="lc-bar-fill hard" style={{ width: `${(solvedHard / hardTotal) * 100}%` }}></div>
@@ -438,7 +457,7 @@ export function Dashboard() {
         </div>
 
         {/* Daily Mastery Challenge Card */}
-        <div className="daily-challenge-box">
+        <div className="daily-challenge-box reveal">
           <div>
             <div className="challenge-eyebrow">DAILY MASTERY CHALLENGE</div>
             <h2 className="challenge-title">
@@ -469,13 +488,13 @@ export function Dashboard() {
       </div>
 
       {/* Stats Widgets */}
-      <div className="dashboard-grid scroll-reveal stagger-item-2" style={{ marginBottom: '1.5rem' }}>
+      <div className="dashboard-grid reveal">
         <div className="stat-card">
           <div className="stat-icon purple">
             <BookOpen size={22} />
           </div>
           <div className="stat-details">
-            <span className="stat-val">{completedPhasesCount} / 9</span>
+            <span className="stat-val motion-counter" data-target={rawPhasesCount} data-suffix=" / 9">{completedPhasesCount} / 9</span>
             <span className="stat-lbl">Roadmap Phases</span>
           </div>
         </div>
@@ -485,7 +504,7 @@ export function Dashboard() {
             <CheckSquare size={22} />
           </div>
           <div className="stat-details">
-            <span className="stat-val">{completedChecklistCount} / 10</span>
+            <span className="stat-val motion-counter" data-target={rawChecklistCount} data-suffix=" / 10">{completedChecklistCount} / 10</span>
             <span className="stat-lbl">Milestones Done</span>
           </div>
         </div>
@@ -495,14 +514,14 @@ export function Dashboard() {
             <Award size={22} />
           </div>
           <div className="stat-details">
-            <span className="stat-val">{unlockedAchievementCount} / {TROPHIES.length}</span>
+            <span className="stat-val motion-counter" data-target={rawAchievementCount} data-suffix={` / ${TROPHIES.length}`}>{unlockedAchievementCount} / {TROPHIES.length}</span>
             <span className="stat-lbl">Achievements Unlocked</span>
           </div>
         </div>
       </div>
 
       {/* Consistency Section */}
-      <div className="panel scroll-reveal stagger-item-3" style={{ marginTop: '1rem' }}>
+      <div className="panel reveal" style={{ marginTop: '1rem' }}>
         <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
           Submission Consistency
         </h3>
@@ -512,13 +531,13 @@ export function Dashboard() {
               <div className="streak-num-block">
                 <div className="streak-big">
                   <span style={{ fontSize: '24px', marginRight: '4px' }}>🔥</span>
-                  <span>{streakCount}</span>
+                  <span className="motion-counter" data-target={streakCountRaw}>{streakCount}</span>
                 </div>
                 <div className="streak-cap">CURRENT STREAK (DAYS)</div>
               </div>
               <div className="streak-num-block">
                 <div className="streak-big">
-                  <span>{longestStreak}</span>
+                  <span className="motion-counter" data-target={rawLongestStreak}>{longestStreak}</span>
                 </div>
                 <div className="streak-cap">LONGEST STREAK</div>
               </div>

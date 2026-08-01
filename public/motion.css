@@ -1,0 +1,119 @@
+/* Motion CSS Layer (Additive) */
+
+/* 1. Scroll Progress Bar */
+#motion-scroll-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2.5px;
+  background: linear-gradient(90deg, #6366f1 0%, #10b981 100%);
+  z-index: 99999;
+  width: 0%;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+  pointer-events: none;
+  transition: width 0.1s ease-out;
+}
+
+/* 2. Scroll-Reveal System */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(15px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal-stagger.in > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-delay: 0s !important;
+    animation-duration: 0s !important;
+    transition-delay: 0s !important;
+    transition-duration: 0s !important;
+    animation-iteration-count: 1 !important;
+  }
+  .reveal, .reveal-stagger > * {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .hero-canvas, #hero-canvas, .particle-canvas {
+    display: none !important;
+  }
+}
+
+/* 3. Micro-interactions spring bounce scale on active */
+.btn:active, .chip:active, button:active, .sql-run-btn:active, .sql-reset-btn:active {
+  transform: scale(0.93) !important;
+  transition: transform 0.1s cubic-bezier(0.25, 1.5, 0.5, 1.25) !important;
+}
+
+/* Lift on hover for cards */
+.res-card, .badge-card, .qcard, .phase-block {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease !important;
+}
+
+.res-card:hover, .badge-card:hover, .qcard:hover, .phase-block:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* 4. Animated Hero SVG Diagram classes */
+.draw-path-line {
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  animation: draw-line-key 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes draw-line-key {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.fade-scale-node {
+  opacity: 0;
+  transform: scale(0.85);
+  animation: pop-node-key 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pop-node-key {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.drifting-particle {
+  animation: float-up-particle 3.5s linear infinite;
+}
+
+@keyframes float-up-particle {
+  0% {
+    transform: translateY(0px) scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.6;
+  }
+  80% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-35px) scale(1.1);
+    opacity: 0;
+  }
+}
