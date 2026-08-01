@@ -230,7 +230,7 @@ export function SqlDrills() {
 
   return (
     <div className="fade-in">
-      <div className="page-header scroll-reveal visible">
+      <div className="page-header">
         <div className="page-title">
           <h1>SQL Drills</h1>
           <p>Practice writing queries against a small sample database with a real-time output validation check.</p>

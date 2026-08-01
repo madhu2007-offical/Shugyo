@@ -178,7 +178,7 @@ export function TestBank() {
 
     return (
       <div className="fade-in">
-        <div className="page-header scroll-reveal visible">
+        <div className="page-header">
           <div className="page-title">
             <h1>Exam Session</h1>
             <p>Complete all questions in the timed block. Review answers at the end.</p>
@@ -282,7 +282,7 @@ export function TestBank() {
 
     return (
       <div className="fade-in">
-        <div className="page-header scroll-reveal visible">
+        <div className="page-header">
           <div className="page-title">
             <h1>Exam Results & Review</h1>
             <p>Grade the questions honestly and read explanation cards below.</p>
@@ -369,7 +369,7 @@ export function TestBank() {
 
   return (
     <div className="fade-in">
-      <div className="page-header scroll-reveal visible">
+      <div className="page-header">
         <div className="page-title">
           <h1>Test Bank</h1>
           <p>Differentiate RDBMS structures via real questions. Hide answers until you try.</p>

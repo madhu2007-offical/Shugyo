@@ -232,7 +232,7 @@ export function Roadmap() {
 
   return (
     <div className="fade-in" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-      <div className="page-header scroll-reveal visible">
+      <div className="page-header">
         <div className="page-title">
           <h1>Mastery Roadmap</h1>
           <p>Explore the DBMS dependency tree. Complete phases to unlock advanced branches.</p>
@@ -249,7 +249,7 @@ export function Roadmap() {
       )}
 
       {/* SVG Container */}
-      <div className="flow-wrap scroll-reveal visible">
+      <div className="flow-wrap">
         <div className="flow-toolbar">
           <div className="flow-toolbar-left">
             <div className="flow-legend">

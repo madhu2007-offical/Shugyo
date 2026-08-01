@@ -95,7 +95,7 @@ export function Trophies() {
 
   return (
     <div className="fade-in">
-      <div className="page-header scroll-reveal visible">
+      <div className="page-header">
         <div className="page-title">
           <h1>Achievements Case</h1>
           <p>Locked achievements stay grayed out until you genuinely complete the requirements.</p>

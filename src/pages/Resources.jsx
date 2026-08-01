@@ -74,7 +74,7 @@ export function Resources() {
 
   return (
     <div className="fade-in">
-      <div className="page-header scroll-reveal visible">
+      <div className="page-header">
         <div className="page-title">
           <h1>Resource Library</h1>
           <p>Courses, playlists, and reading material mapped to each roadmap phase.</p>

@@ -26,7 +26,7 @@ export function Checklist() {
 
   return (
     <div className="fade-in">
-      <div className="page-header scroll-reveal visible">
+      <div className="page-header">
         <div className="page-title">
           <h1>Mastery Checklist</h1>
           <p>Self-assess your structural understanding of database engines. Be honest with yourself.</p>

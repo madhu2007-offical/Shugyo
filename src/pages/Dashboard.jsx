@@ -292,7 +292,7 @@ export function Dashboard() {
 
   return (
     <div className="fade-in">
-      <div className="page-header reveal visible">
+      <div className="page-header">
         <div className="page-title">
           <h1>Mastery Console</h1>
           <p>LeetCode-style daily progress checks and DBMS achievements.</p>
@@ -301,7 +301,7 @@ export function Dashboard() {
 
       {/* Hero section with cursor glow, particle flow, and staggered fades */}
       <section 
-        className="hero reveal visible" 
+        className="hero" 
         ref={heroRef}
         onMouseMove={handleMouseMove}
         style={{ 
@@ -315,7 +315,7 @@ export function Dashboard() {
         }}
       >
         <ParticleCanvas />
-        <div className="reveal-stagger in" style={{ position: 'relative', zIndex: 1 }}>
+        <div className="reveal-stagger" style={{ position: 'relative', zIndex: 1 }}>
           <div className="eyebrow">
             <span className="dot"></span> PERSONAL CONSOLE · BASIC → ADVANCED
           </div>
@@ -333,7 +333,7 @@ export function Dashboard() {
           </div>
 
           {/* 3. Animated Hero SVG Diagram (Additive query scanning B+ Tree details) */}
-          <div className="reveal in" style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center' }}>
             <svg width="460" height="90" viewBox="0 0 460 90" style={{ background: 'rgba(9, 11, 15, 0.6)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px' }}>
               <circle cx="80" cy="80" r="1.5" fill="var(--accent)" className="drifting-particle" style={{ animationDelay: '0s' }} />
               <circle cx="210" cy="80" r="1" fill="var(--good)" className="drifting-particle" style={{ animationDelay: '0.8s' }} />
@@ -368,7 +368,7 @@ export function Dashboard() {
       </section>
 
       {/* Reality Check Pressure Banner */}
-      <div className="pressure-banner reveal" style={{ marginBottom: '24px' }}>
+      <div className="pressure-banner" style={{ marginBottom: '24px' }}>
         <div className="pressure-inner" style={{ transition: 'background-color 0.8s ease' }}>
           <div className="pressure-quote-wrap">
             <div className="pressure-eyebrow">
@@ -388,7 +388,7 @@ export function Dashboard() {
       </div>
 
       {/* Leetcode and Daily Challenge Row */}
-      <div className="dashboard-grid reveal" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+      <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
         {/* LeetCode Style Mastery Ring */}
         <div className="panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <h3 style={{ marginBottom: '1.5rem' }}>Mastery Progress</h3>
@@ -459,7 +459,7 @@ export function Dashboard() {
         </div>
 
         {/* Daily Mastery Challenge Card */}
-        <div className="daily-challenge-box reveal">
+        <div className="daily-challenge-box">
           <div>
             <div className="challenge-eyebrow">DAILY MASTERY CHALLENGE</div>
             <h2 className="challenge-title">
