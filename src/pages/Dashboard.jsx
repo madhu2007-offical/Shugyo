@@ -315,7 +315,7 @@ export function Dashboard() {
         }}
       >
         <ParticleCanvas />
-        <div className="reveal-stagger" style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{ position: 'relative', zIndex: 1 }}>
           <div className="eyebrow">
             <span className="dot"></span> PERSONAL CONSOLE · BASIC → ADVANCED
           </div>
