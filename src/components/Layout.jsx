@@ -64,7 +64,7 @@ export function Layout() {
           </nav>
         </div>
         <div className="sidebar-footer">
-          <div className="user-profile">
+          <div className="avatar-row">
             <div className="avatar">
               {getInitials(user?.email)}
             </div>

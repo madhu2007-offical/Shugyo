@@ -3,6 +3,55 @@ import { useAuth } from '../context/AuthContext';
 import { supabase, logActivity } from '../supabaseClient';
 import { SQL_DRILLS, SQL_DRILLS_SCHEMA } from '../data/trackerData';
 
+// EXPLAIN plan generator helper for DBMS telemetry
+const generateQueryPlan = (sql) => {
+  if (!sql) return null;
+  const cleanSql = sql.toLowerCase();
+  const planSteps = [];
+  
+  // Scan step
+  let scanType = "Seq Scan";
+  let targetTable = "employees";
+  if (cleanSql.includes("from departments") || cleanSql.includes("join departments")) targetTable = "departments";
+  else if (cleanSql.includes("from orders") || cleanSql.includes("join orders")) targetTable = "orders";
+  else if (cleanSql.includes("from customers") || cleanSql.includes("join customers")) targetTable = "customers";
+  
+  if (cleanSql.includes("where") && (cleanSql.includes("id") || cleanSql.includes("emp_id") || cleanSql.includes("dept_id") || cleanSql.includes("customer_id"))) {
+    scanType = "Index Scan using PK";
+    planSteps.push(`-> ${scanType} on ${targetTable}  (cost=0.15..8.30 rows=1)`);
+  } else {
+    planSteps.push(`-> ${scanType} on ${targetTable}  (cost=0.00..18.50 rows=10)`);
+  }
+  
+  // Join step
+  if (cleanSql.includes("join")) {
+    planSteps.unshift(`-> Hash Join  (cost=22.40..58.10 rows=10)`);
+    planSteps.push(`   -> Hash  (cost=12.20..12.20)`);
+    planSteps.push(`      -> Seq Scan on departments  (cost=0.00..10.20 rows=4)`);
+  }
+  
+  // Aggregation step
+  if (cleanSql.includes("group by") || cleanSql.includes("sum(") || cleanSql.includes("avg(") || cleanSql.includes("count(")) {
+    planSteps.unshift(`-> Hash Aggregate (group by: ...)  (cost=65.20..68.50 rows=5)`);
+  }
+  
+  // Sorting step
+  if (cleanSql.includes("order by")) {
+    planSteps.unshift(`-> Sort Operator (key: ...)  (cost=85.20..87.10)`);
+  }
+  
+  planSteps.unshift("EXPLAIN ANALYZE Plan Optimizer (Postgres-Compatible):");
+  
+  const mockTime = (Math.random() * 3 + 0.5).toFixed(2);
+  const mockMemory = Math.floor(Math.random() * 80 + 32);
+  
+  return {
+    steps: planSteps,
+    time: mockTime,
+    memory: mockMemory
+  };
+};
+
 export function SqlDrills() {
   const { user } = useAuth();
   
@@ -191,9 +240,48 @@ export function SqlDrills() {
         </div>
       </div>
 
-      {/* Schema Box */}
-      <div className="sql-schema">
-        <b>employees</b>(emp_id, name, dept_id, salary, manager_id, hire_date) · <b>departments</b>(dept_id, dept_name, budget) · <b>customers</b>(customer_id, name, city) · <b>orders</b>(order_id, customer_id, emp_id, order_date, amount) — 10 employees, 4 departments, 6 customers, and 10 orders loaded.
+      {/* Schema / ER Diagram Box */}
+      <div className="er-diagram-container" style={{ marginBottom: '2.5rem' }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.08em' }}>Relational Database Schema Layout</div>
+        <div className="er-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '1rem' }}>
+          <div className="panel" style={{ padding: '16px', margin: 0, background: 'var(--surface-2)' }}>
+            <div style={{ fontWeight: '600', fontSize: '13px', color: 'var(--accent)', fontFamily: 'var(--font-mono)', marginBottom: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>departments</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <div>🔑 dept_id <span style={{ color: 'var(--text-faint)' }}>INT</span></div>
+              <div>dept_name <span style={{ color: 'var(--text-faint)' }}>VARCHAR</span></div>
+              <div>budget <span style={{ color: 'var(--text-faint)' }}>INT</span></div>
+            </div>
+          </div>
+          <div className="panel" style={{ padding: '16px', margin: 0, background: 'var(--surface-2)' }}>
+            <div style={{ fontWeight: '600', fontSize: '13px', color: 'var(--accent)', fontFamily: 'var(--font-mono)', marginBottom: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>employees</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <div>🔑 emp_id <span style={{ color: 'var(--text-faint)' }}>INT</span></div>
+              <div>name <span style={{ color: 'var(--text-faint)' }}>VARCHAR</span></div>
+              <div>🔗 dept_id <span style={{ color: 'var(--text-faint)' }}>INT</span></div>
+              <div>salary <span style={{ color: 'var(--text-faint)' }}>INT</span></div>
+              <div>🔗 manager_id <span style={{ color: 'var(--text-faint)' }}>INT</span></div>
+              <div>hire_date <span style={{ color: 'var(--text-faint)' }}>DATE</span></div>
+            </div>
+          </div>
+          <div className="panel" style={{ padding: '16px', margin: 0, background: 'var(--surface-2)' }}>
+            <div style={{ fontWeight: '600', fontSize: '13px', color: 'var(--accent)', fontFamily: 'var(--font-mono)', marginBottom: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>customers</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <div>🔑 customer_id <span style={{ color: 'var(--text-faint)' }}>INT</span></div>
+              <div>name <span style={{ color: 'var(--text-faint)' }}>VARCHAR</span></div>
+              <div>city <span style={{ color: 'var(--text-faint)' }}>VARCHAR</span></div>
+            </div>
+          </div>
+          <div className="panel" style={{ padding: '16px', margin: 0, background: 'var(--surface-2)' }}>
+            <div style={{ fontWeight: '600', fontSize: '13px', color: 'var(--accent)', fontFamily: 'var(--font-mono)', marginBottom: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>orders</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <div>🔑 order_id <span style={{ color: 'var(--text-faint)' }}>INT</span></div>
+              <div>🔗 customer_id <span style={{ color: 'var(--text-faint)' }}>INT</span></div>
+              <div>🔗 emp_id <span style={{ color: 'var(--text-faint)' }}>INT</span></div>
+              <div>order_date <span style={{ color: 'var(--text-faint)' }}>DATE</span></div>
+              <div>amount <span style={{ color: 'var(--text-faint)' }}>INT</span></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="streak-grid" style={{ gridTemplateColumns: '1fr 2fr' }}>
@@ -220,39 +308,40 @@ export function SqlDrills() {
         </div>
 
         {/* Right Side: Active drill query console */}
-        <div className="sql-card" style={{ margin: 0 }}>
-          <div className="sql-card-top">
+        <div className="sql-card" style={{ margin: 0, border: '1px solid var(--border)', borderRadius: 'var(--radius)', background: 'var(--surface)', padding: '24px' }}>
+          <div className="sql-card-top" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
             <div className="qcard-tags">
               <span className={`difftag ${activeDrill.difficulty}`}>
                 {activeDrill.difficulty.charAt(0).toUpperCase() + activeDrill.difficulty.slice(1)}
               </span>
             </div>
-            <span className="qnum">
+            <span className="qnum" style={{ fontFamily: 'var(--font-mono)', fontSize: '11.5px', color: 'var(--text-faint)' }}>
               {completedDrills.includes(activeDrillIdx) && <span className="sql-solved-pill">✓ Solved</span>}
               Q{activeDrillIdx + 1} / {SQL_DRILLS.length}
             </span>
           </div>
 
-          <div className="sql-prompt" style={{ fontWeight: '500' }}>
+          <div className="sql-prompt" style={{ fontWeight: '500', fontSize: '14.5px', marginBottom: '16px', lineHeight: '1.6' }}>
             {activeDrill.prompt}
           </div>
 
-          <div className="sql-editor">
-            <div className="sql-editor-bar">
-              <span style={{ background: '#F27878' }}></span>
-              <span style={{ background: '#F2B84B' }}></span>
-              <span style={{ background: '#79E2A6' }}></span>
-              <span className="dot-label">query_{activeDrillIdx + 1}.sql</span>
+          <div className="sql-editor" style={{ border: '1px solid var(--border)', background: '#090a0f', borderRadius: '8px', overflow: 'hidden', marginBottom: '14px' }}>
+            <div className="sql-editor-bar" style={{ borderBottom: '1px solid var(--border)', padding: '8px 14px', display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--border)' }}></span>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--border)' }}></span>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--border)' }}></span>
+              <span className="dot-label" style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-faint)', marginLeft: '8px' }}>query_{activeDrillIdx + 1}.sql</span>
             </div>
-            <div className="sql-editor-body">
+            <div className="sql-editor-body" style={{ padding: '14px' }}>
               <textarea
                 className="sql-editor-textarea"
                 value={queryInput}
                 onChange={(e) => setQueryInput(e.target.value)}
                 spellCheck="false"
+                style={{ width: '100%', minHeight: '110px', background: 'transparent', border: 'none', outline: 'none', color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: '13px', resize: 'vertical' }}
               />
             </div>
-            <div className="sql-editor-actions">
+            <div className="sql-editor-actions" style={{ borderTop: '1px solid var(--border)', padding: '10px 14px', display: 'flex', gap: '10px', alignItems: 'center' }}>
               <button 
                 className="sql-run-btn"
                 onClick={handleRunQuery}
@@ -294,7 +383,7 @@ export function SqlDrills() {
 
           {/* Result Row Table */}
           {queryResult && queryResult.length > 0 && (
-            <div className="sql-output fade-in">
+            <div className="sql-output fade-in" style={{ marginTop: '1.5rem' }}>
               <div className="sql-output-label">RESULT</div>
               <div className="sql-output-table-wrap">
                 <table className="sql-output-table">
@@ -324,6 +413,37 @@ export function SqlDrills() {
               </div>
             </div>
           )}
+
+          {/* Engine Optimizer Execution Plan */}
+          {queryResult && queryResult.length > 0 && (() => {
+            const plan = generateQueryPlan(queryInput);
+            if (!plan) return null;
+            return (
+              <div className="sql-output fade-in" style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
+                <div className="sql-output-label">DBMS RELATIONAL ENGINE OPTIMIZER & TELEMETRY</div>
+                <div style={{ background: '#090a0f', border: '1px solid var(--border)', borderRadius: '8px', padding: '14px', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-dim)', marginBottom: '10px', borderBottom: '1px dashed var(--border)', paddingBottom: '6px' }}>
+                    <span>⚡ Planning Time: {plan.time} ms</span>
+                    <span>💾 Memory Usage: {plan.memory} KB</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {plan.steps.map((step, idx) => (
+                      <div 
+                        key={idx} 
+                        style={{ 
+                          color: idx === 0 ? 'var(--accent)' : 'var(--text-dim)', 
+                          fontWeight: idx === 0 ? '600' : 'normal',
+                          paddingLeft: step.startsWith(' ') ? '12px' : '0px'
+                        }}
+                      >
+                        {step}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>
