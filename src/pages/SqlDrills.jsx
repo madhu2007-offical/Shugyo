@@ -97,34 +97,46 @@ export function SqlDrills() {
   const [successMsg, setSuccessMsg] = useState('');
   const [statusText, setStatusText] = useState('');
   const [statusClass, setStatusClass] = useState('');
-  const [dbReady, setDbReady] = useState(false);
 
-  // Initialize Alasql schema
+  // Initialize Alasql schema with polling to avoid CDN race conditions
   useEffect(() => {
-    try {
-      if (!window.alasql) {
-        throw new Error('Alasql library is loading...');
-      }
-      
-      // Clear any pre-existing tables to re-initialize cleanly
-      window.alasql('DROP TABLE IF EXISTS employees');
-      window.alasql('DROP TABLE IF EXISTS departments');
-      window.alasql('DROP TABLE IF EXISTS customers');
-      window.alasql('DROP TABLE IF EXISTS orders');
+    let timer;
+    const initDb = () => {
+      if (window.alasql) {
+        try {
+          // Clear any pre-existing tables to re-initialize cleanly
+          window.alasql('DROP TABLE IF EXISTS employees');
+          window.alasql('DROP TABLE IF EXISTS departments');
+          window.alasql('DROP TABLE IF EXISTS customers');
+          window.alasql('DROP TABLE IF EXISTS orders');
 
-      // Execute SQL Seed script statement by statement
-      const statements = SQL_DRILLS_SCHEMA.split(';')
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
-      
-      statements.forEach(stmt => {
-        window.alasql(stmt);
-      });
-      setDbReady(true);
-    } catch (err) {
-      console.error('Alasql initialization error:', err);
-      setErrorMsg('Failed to launch in-browser SQL compiler.');
+          // Execute SQL Seed script statement by statement
+          const statements = SQL_DRILLS_SCHEMA.split(';')
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
+          
+          statements.forEach(stmt => {
+            window.alasql(stmt);
+          });
+          setErrorMsg('');
+          if (timer) clearInterval(timer);
+        } catch (err) {
+          console.error('Alasql initialization error:', err);
+          setErrorMsg('Failed to initialize database tables.');
+          if (timer) clearInterval(timer);
+        }
+      }
+    };
+
+    initDb();
+
+    if (!window.alasql) {
+      timer = setInterval(initDb, 100);
     }
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
   }, []);
 
   // Handle drill change
@@ -161,7 +173,11 @@ export function SqlDrills() {
   };
 
   const handleRunQuery = async () => {
-    if (!dbReady || !window.alasql) return;
+    // If not ready on click, try to initialize once
+    if (!window.alasql) {
+      setErrorMsg('SQL compiler is still loading from CDN. Please wait a second and run again.');
+      return;
+    }
     
     setQueryResult(null);
     setErrorMsg('');
@@ -172,8 +188,18 @@ export function SqlDrills() {
     const drill = SQL_DRILLS[activeDrillIdx];
     let userRows;
 
+    // Clean out SQL comments (-- ...) to prevent Alasql parser crashes
+    const cleanQuery = queryInput
+      .split('\n')
+      .map(line => {
+        const commentIdx = line.indexOf('--');
+        return commentIdx >= 0 ? line.substring(0, commentIdx) : line;
+      })
+      .join('\n')
+      .trim();
+
     try {
-      userRows = window.alasql(queryInput);
+      userRows = window.alasql(cleanQuery);
     } catch (err) {
       setStatusText('⚠ Query error');
       setStatusClass('fail');
