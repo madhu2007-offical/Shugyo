@@ -69,7 +69,7 @@ export function Layout() {
           entry.target.classList.add('visible');
         }
       });
-    }, { threshold: 0.05 });
+    }, { threshold: 0.02 });
 
     // Set a slight timeout to let the page components mount fully
     const timer = setTimeout(() => {

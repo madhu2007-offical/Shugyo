@@ -68,7 +68,7 @@
         }
       }
     });
-  }, { threshold: 0.12 });
+  }, { threshold: 0.02 });
 
   // 4. Hero cursor glow coordinate binder
   function bindHeroGlow(heroEl) {
