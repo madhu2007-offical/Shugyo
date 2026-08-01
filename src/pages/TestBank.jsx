@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { supabase, logActivity } from '../supabaseClient';
+import { useProgress } from '../context/ProgressContext';
 import { TEST_QUESTIONS } from '../data/trackerData';
 
 export function TestBank() {
-  const { user } = useAuth();
-  
-  // Graded questions state (stored in Supabase question_grades table)
-  const [grades, setGrades] = useState({});
-  const [loading, setLoading] = useState(true);
+  const { 
+    loading, 
+    gradeState, 
+    updateGradeState, 
+    examCount, 
+    incrementExamCount 
+  } = useProgress();
+
   const [errorMsg, setErrorMsg] = useState('');
   
   // Filtering and Shuffling State
@@ -22,7 +24,7 @@ export function TestBank() {
   // Exam Mode State
   const [examActive, setExamActive] = useState(false);
   const [examConfigOpen, setExamConfigOpen] = useState(false);
-  const [examCount, setExamCount] = useState(15);
+  const [examCountSetting, setExamCountSetting] = useState(15);
   const [examTime, setExamTime] = useState(20); // minutes
   const [examQuestions, setExamQuestions] = useState([]);
   const [examCurrentIdx, setExamCurrentIdx] = useState(0);
@@ -31,37 +33,10 @@ export function TestBank() {
   const [examFinished, setExamFinished] = useState(false);
   const [examTimeUsed, setExamTimeUsed] = useState(0);
 
-  // 1. Fetch historical question grades from Supabase
-  const fetchGrades = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('question_grades')
-        .select('question_id, grade')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      const gradeMap = {};
-      data.forEach(item => {
-        gradeMap[item.question_id] = item.grade;
-      });
-      setGrades(gradeMap);
-    } catch (err) {
-      console.error('Error fetching question grades:', err);
-      setErrorMsg('Failed to load graded questions.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (user) {
-      fetchGrades();
-    }
     // Initialize default order
     setQuestionOrder(TEST_QUESTIONS.map((_, idx) => idx));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, []);
 
   // Handle shuffling
   const handleShuffle = () => {
@@ -84,26 +59,7 @@ export function TestBank() {
   // Grade operation
   const handleGrade = async (qIdx, gradeType) => {
     try {
-      const { error } = await supabase
-        .from('question_grades')
-        .upsert({
-          user_id: user.id,
-          question_id: qIdx,
-          grade: gradeType,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,question_id'
-        });
-
-      if (error) throw error;
-
-      // Update state locally
-      setGrades(prev => ({
-        ...prev,
-        [qIdx]: gradeType
-      }));
-
-      await logActivity(user.id);
+      await updateGradeState(qIdx.toString(), gradeType);
     } catch (err) {
       console.error('Error saving grade:', err);
       setErrorMsg('Failed to sync grade to the database.');
@@ -113,7 +69,7 @@ export function TestBank() {
   // Exam Mode mechanics
   const handleStartExam = () => {
     const total = TEST_QUESTIONS.length;
-    const count = examCount === 'all' ? total : Math.min(examCount, total);
+    const count = examCountSetting === 'all' ? total : Math.min(examCountSetting, total);
     
     // Shuffle all questions and select subset
     const shuffledPool = TEST_QUESTIONS.map((_, idx) => idx);
@@ -162,21 +118,11 @@ export function TestBank() {
     const timeUsed = (examTime * 60) - examTimeRemaining;
     setExamTimeUsed(timeUsed);
 
-    // Save exam attempt as metadata to Supabase
+    // Save exam attempt count increment
     try {
-      const examCorrectCount = examQuestions.filter(qi => grades[qi] === 'good').length;
-      await supabase
-        .from('test_attempts')
-        .insert({
-          user_id: user.id,
-          test_id: 'exam_mode',
-          score: examCorrectCount,
-          total_questions: examQuestions.length,
-          attempted_at: new Date().toISOString()
-        });
-      await logActivity(user.id);
+      await incrementExamCount();
     } catch (err) {
-      console.error('Error logging exam attempt:', err);
+      console.error('Error incrementing exam count:', err);
     }
   };
 
@@ -200,14 +146,14 @@ export function TestBank() {
   }
 
   // Derive score metrics
-  const gradedValues = Object.values(grades);
-  const knownCount = gradedValues.filter(g => g === 'good').length;
+  const gradedValues = Object.entries(gradeState);
+  const knownCount = gradedValues.filter(([, g]) => g === 'good').length;
   const gradedTotal = gradedValues.length;
   const accuracy = gradedTotal ? Math.round((knownCount / gradedTotal) * 100) : null;
 
   // Weakest topics evaluation
   const topicStats = {};
-  Object.entries(grades).forEach(([qIdx, gradeType]) => {
+  Object.entries(gradeState).forEach(([qIdx, gradeType]) => {
     const q = TEST_QUESTIONS[parseInt(qIdx, 10)];
     if (!q) return;
     if (!topicStats[q.topic]) {
@@ -252,7 +198,7 @@ export function TestBank() {
           </div>
         </div>
 
-        <div className="exam-overlay show">
+        <div className="exam-overlay show" style={{ border: '1px solid var(--accent-line)', background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '24px' }}>
           <div className="exam-top">
             <div className="exam-progress-text">
               Question {examCurrentIdx + 1} of {examQuestions.length}
@@ -280,14 +226,14 @@ export function TestBank() {
               <button 
                 className="grade-btn knew"
                 onClick={() => handleGrade(qIdx, 'good')}
-                style={{ border: grades[qIdx] === 'good' ? '2px solid var(--good)' : '1px solid var(--border)' }}
+                style={{ border: gradeState[qIdx] === 'good' ? '2px solid var(--good)' : '1px solid var(--border)' }}
               >
                 ✓ I know this
               </button>
               <button 
                 className="grade-btn missed"
                 onClick={() => handleGrade(qIdx, 'bad')}
-                style={{ border: grades[qIdx] === 'bad' ? '2px solid var(--danger)' : '1px solid var(--border)' }}
+                style={{ border: gradeState[qIdx] === 'bad' ? '2px solid var(--danger)' : '1px solid var(--border)' }}
               >
                 ✗ I missed this
               </button>
@@ -326,7 +272,7 @@ export function TestBank() {
           {/* Exam progress dots */}
           <div className="exam-dots">
             {examQuestions.map((qi, pos) => {
-              const isAnswered = grades[qi] !== undefined;
+              const isAnswered = gradeState[qi] !== undefined;
               const isCurrent = pos === examCurrentIdx;
               return (
                 <span
@@ -369,7 +315,7 @@ export function TestBank() {
 
         <div className="exam-overlay show" style={{ border: 'none', background: 'transparent', padding: 0 }}>
           <div className="fd-top" style={{ marginBottom: '14px' }}>
-            <div className="fd-title" style={{ fontSize: '20px' }}>Reviewing Exam Attempt</div>
+            <div className="fd-title" style={{ fontSize: '20px' }}>Reviewing Exam Attempt ({examCount} total exams completed)</div>
             <div className="fd-time">Time used: {mm}m {ss}s / {examTime}m</div>
           </div>
 
@@ -408,21 +354,21 @@ export function TestBank() {
                         <button 
                           className="grade-btn knew"
                           onClick={() => handleGrade(qi, 'good')}
-                          style={{ border: grades[qi] === 'good' ? '2px solid var(--good)' : '1px solid var(--border)' }}
+                          style={{ border: gradeState[qi] === 'good' ? '2px solid var(--good)' : '1px solid var(--border)' }}
                         >
                           ✓ I knew it
                         </button>
                         <button 
                           className="grade-btn missed"
                           onClick={() => handleGrade(qi, 'bad')}
-                          style={{ border: grades[qi] === 'bad' ? '2px solid var(--danger)' : '1px solid var(--border)' }}
+                          style={{ border: gradeState[qi] === 'bad' ? '2px solid var(--danger)' : '1px solid var(--border)' }}
                         >
                           ✗ I missed it
                         </button>
                       </div>
-                      {grades[qi] && (
-                        <div className={`grade-result ${grades[qi] === 'good' ? 'good' : 'bad'}`} style={{ marginTop: '10px' }}>
-                          {grades[qi] === 'good' ? '✓ Marked as known' : '✗ Marked for review'}
+                      {gradeState[qi] && (
+                        <div className={`grade-result ${gradeState[qi] === 'good' ? 'good' : 'bad'}`} style={{ marginTop: '10px' }}>
+                          {gradeState[qi] === 'good' ? '✓ Marked as known' : '✗ Marked for review'}
                         </div>
                       )}
                     </div>
@@ -495,8 +441,8 @@ export function TestBank() {
               {[10, 15, 20, 'all'].map(c => (
                 <button 
                   key={c} 
-                  className={`chip ${examCount === c ? 'active' : ''}`}
-                  onClick={() => setExamCount(c)}
+                  className={`chip ${examCountSetting === c ? 'active' : ''}`}
+                  onClick={() => setExamCountSetting(c)}
                 >
                   {c === 'all' ? `All (${TEST_QUESTIONS.length})` : `${c} questions`}
                 </button>
@@ -527,7 +473,7 @@ export function TestBank() {
       <div>
         {filteredIndices.map((idx, displayIdx) => {
           const item = TEST_QUESTIONS[idx];
-          const isRevealed = !!revealedIds[idx] || grades[idx] !== undefined;
+          const isRevealed = !!revealedIds[idx] || gradeState[idx] !== undefined;
           
           return (
             <div key={idx} className={`qcard ${item.diff === 'advanced' ? 'diff-advanced' : ''}`}>
@@ -559,21 +505,21 @@ export function TestBank() {
                     <button 
                       className="grade-btn knew"
                       onClick={() => handleGrade(idx, 'good')}
-                      style={{ border: grades[idx] === 'good' ? '2px solid var(--good)' : '1px solid var(--border)' }}
+                      style={{ border: gradeState[idx] === 'good' ? '2px solid var(--good)' : '1px solid var(--border)' }}
                     >
                       ✓ I knew it
                     </button>
                     <button 
                       className="grade-btn missed"
                       onClick={() => handleGrade(idx, 'bad')}
-                      style={{ border: grades[idx] === 'bad' ? '2px solid var(--danger)' : '1px solid var(--border)' }}
+                      style={{ border: gradeState[idx] === 'bad' ? '2px solid var(--danger)' : '1px solid var(--border)' }}
                     >
                       ✗ I missed it
                     </button>
                   </div>
-                  {grades[idx] && (
-                    <div className={`grade-result ${grades[idx] === 'good' ? 'good' : 'bad'}`}>
-                      {grades[idx] === 'good' ? '✓ Marked as known' : '✗ Marked for review'}
+                  {gradeState[idx] && (
+                    <div className={`grade-result ${gradeState[idx] === 'good' ? 'good' : 'bad'}`}>
+                      {gradeState[idx] === 'good' ? '✓ Marked as known' : '✗ Marked for review'}
                     </div>
                   )}
                 </div>

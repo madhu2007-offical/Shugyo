@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { supabase, logActivity } from '../supabaseClient';
+import { useProgress } from '../context/ProgressContext';
 import { calculateStreak } from '../utils/streakCalculator';
 import { evaluateAchievements } from '../utils/trophyEvaluator';
 import { QUOTES, PRESSURE_QUOTES, TROPHIES, SQL_DRILLS, TEST_QUESTIONS } from '../data/trackerData';
@@ -8,63 +7,20 @@ import { BookOpen, CheckSquare, Award, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function Dashboard() {
-  const { user } = useAuth();
-  
-  const [progress, setProgress] = useState([]);
-  const [checklist, setChecklist] = useState([]);
-  const [grades, setGrades] = useState([]);
-  const [streaks, setStreaks] = useState([]);
-  const [testAttempts, setTestAttempts] = useState([]);
-  
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
-  
+  const { 
+    loading,
+    phaseState, 
+    checklistState, 
+    gradeState, 
+    streakDays, 
+    sqlSolved, 
+    examCount, 
+    toggleStreakDay 
+  } = useProgress();
+
   // Rotating quote indices
   const [quoteIdx, setQuoteIdx] = useState(0);
   const [pressureIdx, setPressureIdx] = useState(0);
-
-  // 1. Fetch all data from Supabase
-  const fetchAllData = async () => {
-    try {
-      const progressPromise = supabase.from('progress').select('*').eq('user_id', user.id);
-      const checklistPromise = supabase.from('checklist_items').select('*').eq('user_id', user.id);
-      const gradesPromise = supabase.from('question_grades').select('*').eq('user_id', user.id);
-      const streakPromise = supabase.from('streaks').select('*').eq('user_id', user.id);
-      const testPromise = supabase.from('test_attempts').select('*').eq('user_id', user.id);
-
-      const [pRes, cRes, gRes, sRes, tRes] = await Promise.all([
-        progressPromise,
-        checklistPromise,
-        gradesPromise,
-        streakPromise,
-        testPromise
-      ]);
-
-      if (pRes.error) throw pRes.error;
-      if (cRes.error) throw cRes.error;
-      if (gRes.error) throw gRes.error;
-      if (sRes.error) throw sRes.error;
-      if (tRes.error) throw tRes.error;
-
-      setProgress(pRes.data || []);
-      setChecklist(cRes.data || []);
-      setGrades(gRes.data || []);
-      setStreaks(sRes.data || []);
-      setTestAttempts(tRes.data || []);
-    } catch (err) {
-      console.error('Error loading dashboard data:', err);
-      setErrorMsg(err.message || 'Failed to load tracking data from database.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchAllData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
 
   // Quote rotation intervals
   useEffect(() => {
@@ -89,33 +45,8 @@ export function Dashboard() {
   };
 
   const handleToggleToday = async () => {
-    if (!user) return;
     const todayStr = toDateStr(new Date());
-    const isDoneToday = streaks.some(s => s.activity_date === todayStr);
-
-    try {
-      if (isDoneToday) {
-        // Delete today's streak
-        const { error } = await supabase
-          .from('streaks')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('activity_date', todayStr);
-        if (error) throw error;
-      } else {
-        // Log today's streak
-        await logActivity(user.id);
-      }
-      // Re-fetch streaks data
-      const { data, error } = await supabase
-        .from('streaks')
-        .select('*')
-        .eq('user_id', user.id);
-      if (error) throw error;
-      setStreaks(data || []);
-    } catch (err) {
-      console.error('Error toggling today streak:', err);
-    }
+    await toggleStreakDay(todayStr);
   };
 
   if (loading) {
@@ -124,19 +55,32 @@ export function Dashboard() {
         <div className="loader-card">
           <div className="spinner"></div>
           <h2>修行 SHUGYO</h2>
-          <p>Syncing database session...</p>
+          <p>Loading DBMS master console...</p>
         </div>
       </div>
     );
   }
 
+  // Map state to what metrics calculators expect
+  const progressList = [
+    ...Object.entries(phaseState).map(([nodeId, status]) => ({ node_id: nodeId, status })),
+    ...sqlSolved.map(drillIdx => ({ node_id: `drill_${drillIdx}`, status: 'done' }))
+  ];
+
+  const checklistList = checklistState.map(itemId => ({ item_id: itemId, completed: true }));
+  const questionGradesList = Object.entries(gradeState).map(([qId, grade]) => ({ question_id: qId, grade }));
+  const testAttemptsList = Array(examCount).fill({ test_id: 'exam_mode' });
+
   // Derive counts
-  const completedPhasesCount = progress.filter(p => !p.node_id.startsWith('drill_') && p.status === 'done').length;
-  const completedChecklistCount = checklist.filter(c => c.completed).length;
-  const streakCount = calculateStreak(streaks);
+  const completedPhasesCount = Object.values(phaseState).filter(status => status === 'done').length;
+  const completedChecklistCount = checklistState.length;
+  
+  // Format streaks for streak calculator
+  const streakObjects = streakDays.map(day => ({ activity_date: day }));
+  const streakCount = calculateStreak(streakObjects);
   
   // Calculate longest streak
-  const sortedStreakDates = Array.from(new Set(streaks.map(s => s.activity_date))).sort();
+  const sortedStreakDates = [...streakDays].sort();
   let longestStreak = 0;
   let currentRun = 0;
   let prevDate = null;
@@ -154,47 +98,40 @@ export function Dashboard() {
 
   // Evaluate achievements
   const achievementStatus = evaluateAchievements({
-    progress,
-    checklistItems: checklist,
-    questionGrades: grades,
-    testAttempts,
+    progress: progressList,
+    checklistItems: checklistList,
+    questionGrades: questionGradesList,
+    testAttempts: testAttemptsList,
     streakCount
   });
   const unlockedAchievementCount = Object.values(achievementStatus).filter(Boolean).length;
 
   // 2. Leetcode-style statistics compilation
-  // Easy total: 25 questions + 3 easy drills = 28
-  // Medium total: 20 questions + 7 medium drills = 27
-  // Hard/Advanced total: 15 questions + 19 advanced questions + 4 hard drills = 38
   const easyTotal = 28;
   const mediumTotal = 27;
   const hardTotal = 38;
   const grandTotal = easyTotal + mediumTotal + hardTotal;
 
-  // Graded questions in grades: [{ question_id: "...", grade: "good"|"bad" }]
-  const gradedKnownIds = grades.filter(g => g.grade === 'good').map(g => parseInt(g.question_id, 10));
-  // Solved drills in progress: [{ node_id: "drill_0", status: "done" }]
-  const solvedDrillIdxs = progress
-    .filter(p => p.node_id.startsWith('drill_') && p.status === 'done')
-    .map(p => parseInt(p.node_id.replace('drill_', ''), 10));
-
+  // Easy / Medium / Hard Solved calculation
   let solvedEasy = 0;
   let solvedMedium = 0;
   let solvedHard = 0;
 
-  // Calculate easy/medium/hard from test bank questions
-  gradedKnownIds.forEach(qIdx => {
-    const q = TEST_QUESTIONS[qIdx];
-    if (q) {
-      if (q.diff === 'easy') solvedEasy++;
-      else if (q.diff === 'medium') solvedMedium++;
-      else if (q.diff === 'hard' || q.diff === 'advanced') solvedHard++;
+  // Process Solved Questions
+  questionGradesList.forEach(item => {
+    if (item.grade === 'good') {
+      const q = TEST_QUESTIONS[parseInt(item.question_id, 10)];
+      if (q) {
+        if (q.diff === 'easy') solvedEasy++;
+        else if (q.diff === 'medium') solvedMedium++;
+        else if (q.diff === 'hard' || q.diff === 'advanced') solvedHard++;
+      }
     }
   });
 
-  // Calculate easy/medium/hard from drills
-  solvedDrillIdxs.forEach(dIdx => {
-    const d = SQL_DRILLS[dIdx];
+  // Process Solved SQL Drills
+  sqlSolved.forEach(drillIdx => {
+    const d = SQL_DRILLS[drillIdx];
     if (d) {
       if (d.difficulty === 'easy') solvedEasy++;
       else if (d.difficulty === 'medium') solvedMedium++;
@@ -210,15 +147,13 @@ export function Dashboard() {
   const strokeDashoffset = circumference - ((solvedTotal / grandTotal) * circumference);
 
   // 3. Deterministic Daily Challenge
-  const today = new Date();
-  const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000);
-  const dailyDrillIdx = dayOfYear % SQL_DRILLS.length;
+  const dailyDrillIdx = dayOfYearIndex() % SQL_DRILLS.length;
   const dailyDrill = SQL_DRILLS[dailyDrillIdx];
-  const isDailySolved = solvedDrillIdxs.includes(dailyDrillIdx);
+  const isDailySolved = sqlSolved.includes(dailyDrillIdx);
 
   // 4. Heatmap calculations (LeetCode style submissions shades of green)
   const todayKey = toDateStr(new Date());
-  const isDoneToday = streaks.some(s => s.activity_date === todayKey);
+  const isDoneToday = streakDays.includes(todayKey);
   const DAYS = 119;
   const heatmapCells = [];
   const startDay = new Date();
@@ -230,32 +165,31 @@ export function Dashboard() {
     heatmapCells.push({ empty: true, id: `filler-${i}` });
   }
 
-  // Count logs per date to assign LeetCode green intensity levels
-  const logsPerDate = {};
-  streaks.forEach(s => {
-    logsPerDate[s.activity_date] = (logsPerDate[s.activity_date] || 0) + 1;
-  });
-
   for (let i = 0; i < DAYS; i++) {
     const currentDay = new Date(startDay);
     currentDay.setDate(currentDay.getDate() + i);
     const key = toDateStr(currentDay);
-    const count = logsPerDate[key] || 0;
+    const hasLog = streakDays.includes(key);
     
-    // Assign 4 intensity levels
+    // Simple active/inactive mapping for single-user JSONB streaks
     let intensityClass = '';
-    if (count === 1) intensityClass = 'lvl1';
-    else if (count === 2) intensityClass = 'lvl2';
-    else if (count === 3) intensityClass = 'lvl3';
-    else if (count >= 4) intensityClass = 'lvl4';
+    if (hasLog) intensityClass = 'lvl4';
 
     heatmapCells.push({
       empty: false,
       date: key,
-      count,
+      hasLog,
       intensityClass,
       isToday: key === todayKey
     });
+  }
+
+  function dayOfYearIndex() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 0);
+    const diff = now - start;
+    const oneDay = 1000 * 60 * 60 * 24;
+    return Math.floor(diff / oneDay);
   }
 
   return (
@@ -267,11 +201,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      {errorMsg && (
-        <div className="error-banner">
-          <p>{errorMsg}</p>
-        </div>
-      )}
+
 
       {/* Hero section */}
       <section className="hero" style={{ padding: '0 0 20px 0' }}>
@@ -319,7 +249,7 @@ export function Dashboard() {
           <h3 style={{ marginBottom: '1.5rem' }}>Mastery Progress</h3>
           <div className="lc-progress-panel">
             <div className="lc-circle-wrapper">
-              <svg width="120" height="120" viewBox="0 0 120 120">
+              <svg width="90" height="90" viewBox="0 0 120 120">
                 <circle 
                   cx="60" 
                   cy="60" 
@@ -475,7 +405,7 @@ export function Dashboard() {
               {isDoneToday ? '✓ Done today' : 'Mark today done'}
             </button>
             <div className="pressure-subtext" style={{ marginTop: '16px' }}>
-              {streaks.length} activity day{streaks.length === 1 ? '' : 's'} logged total
+              {streakDays.length} activity day{streakDays.length === 1 ? '' : 's'} logged total
             </div>
           </div>
           
@@ -490,22 +420,9 @@ export function Dashboard() {
                     <div 
                       key={cell.date} 
                       className={`hm-cell ${cell.intensityClass} ${cell.isToday ? 'today-cell' : ''}`}
-                      title={`${cell.date}: ${cell.count} activity log${cell.count === 1 ? '' : 's'}`}
+                      title={`${cell.date}: ${cell.hasLog ? '1 active log' : '0 logs'}`}
                       onClick={async () => {
-                        try {
-                          // Insert another log to build intensity
-                          await supabase
-                            .from('streaks')
-                            .insert({ user_id: user.id, activity_date: cell.date });
-                          // Refresh data
-                          const { data } = await supabase
-                            .from('streaks')
-                            .select('*')
-                            .eq('user_id', user.id);
-                          setStreaks(data || []);
-                        } catch (err) {
-                          console.error(err);
-                        }
+                        await toggleStreakDay(cell.date);
                       }}
                     />
                   );

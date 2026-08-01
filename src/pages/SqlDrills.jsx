@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { supabase, logActivity } from '../supabaseClient';
+import { useProgress } from '../context/ProgressContext';
 import { SQL_DRILLS, SQL_DRILLS_SCHEMA } from '../data/trackerData';
 
 // EXPLAIN plan generator helper for DBMS telemetry
@@ -53,9 +52,8 @@ const generateQueryPlan = (sql) => {
 };
 
 export function SqlDrills() {
-  const { user } = useAuth();
+  const { loading, sqlSolved, logSqlSolved } = useProgress();
   
-  const [completedDrills, setCompletedDrills] = useState([]);
   const [activeDrillIdx, setActiveDrillIdx] = useState(0);
   const [queryInput, setQueryInput] = useState('');
   
@@ -93,30 +91,6 @@ export function SqlDrills() {
       setErrorMsg('Failed to launch in-browser SQL compiler.');
     }
   }, []);
-
-  // 2. Fetch completed drills from Supabase
-  const fetchCompletedDrills = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('progress')
-        .select('node_id')
-        .eq('user_id', user.id)
-        .eq('status', 'done')
-        .like('node_id', 'drill_%');
-
-      if (error) throw error;
-      setCompletedDrills(data.map(item => parseInt(item.node_id.replace('drill_', ''), 10)));
-    } catch (err) {
-      console.error('Error fetching completed drills:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchCompletedDrills();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
 
   // Handle drill change
   const handleSelectDrill = (idx) => {
@@ -192,7 +166,7 @@ export function SqlDrills() {
         setSuccessMsg('Perfect! Your query results match the target results.');
         
         // Sync progress state to Supabase
-        await handleSaveCompletion(activeDrillIdx);
+        await logSqlSolved(activeDrillIdx);
       } else {
         setStatusText("✗ Doesn't match yet");
         setStatusClass('fail');
@@ -205,31 +179,19 @@ export function SqlDrills() {
     }
   };
 
-  const handleSaveCompletion = async (drillIdx) => {
-    if (completedDrills.includes(drillIdx)) return;
-
-    try {
-      const { error } = await supabase
-        .from('progress')
-        .upsert({
-          user_id: user.id,
-          node_id: `drill_${drillIdx}`,
-          status: 'done',
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,node_id'
-        });
-
-      if (error) throw error;
-
-      setCompletedDrills(prev => [...prev, drillIdx]);
-      await logActivity(user.id);
-    } catch (err) {
-      console.error('Error saving SQL completion state:', err);
-    }
-  };
-
   const activeDrill = SQL_DRILLS[activeDrillIdx];
+
+  if (loading) {
+    return (
+      <div className="fullscreen-loader">
+        <div className="loader-card">
+          <div className="spinner"></div>
+          <h2>修行 SHUGYO</h2>
+          <p>Seeding database engines...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fade-in">
@@ -290,7 +252,7 @@ export function SqlDrills() {
           <h3 style={{ marginBottom: '1rem' }}>Select a Drill</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {SQL_DRILLS.map((drill, idx) => {
-              const isCompleted = completedDrills.includes(idx);
+              const isCompleted = sqlSolved.includes(idx);
               const isActive = activeDrillIdx === idx;
               return (
                 <button
@@ -316,7 +278,7 @@ export function SqlDrills() {
               </span>
             </div>
             <span className="qnum" style={{ fontFamily: 'var(--font-mono)', fontSize: '11.5px', color: 'var(--text-faint)' }}>
-              {completedDrills.includes(activeDrillIdx) && <span className="sql-solved-pill">✓ Solved</span>}
+              {sqlSolved.includes(activeDrillIdx) && <span className="sql-solved-pill">✓ Solved</span>}
               Q{activeDrillIdx + 1} / {SQL_DRILLS.length}
             </span>
           </div>

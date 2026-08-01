@@ -1,64 +1,18 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { supabase } from '../supabaseClient';
+import { useProgress } from '../context/ProgressContext';
 import { calculateStreak } from '../utils/streakCalculator';
 import { evaluateAchievements } from '../utils/trophyEvaluator';
 import { TROPHIES, ROADMAP_NODES, MILESTONES, SQL_DRILLS } from '../data/trackerData';
 
 export function Trophies() {
-  const { user } = useAuth();
-  
-  const [progress, setProgress] = useState([]);
-  const [checklist, setChecklist] = useState([]);
-  const [grades, setGrades] = useState([]);
-  const [streaks, setStreaks] = useState([]);
-  const [testAttempts, setTestAttempts] = useState([]);
-  
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
-
-  useEffect(() => {
-    if (!user) return;
-
-    const fetchAllData = async () => {
-      setLoading(true);
-      setErrorMsg('');
-      try {
-        const progressPromise = supabase.from('progress').select('*').eq('user_id', user.id);
-        const checklistPromise = supabase.from('checklist_items').select('*').eq('user_id', user.id);
-        const gradesPromise = supabase.from('question_grades').select('*').eq('user_id', user.id);
-        const streakPromise = supabase.from('streaks').select('*').eq('user_id', user.id);
-        const testPromise = supabase.from('test_attempts').select('*').eq('user_id', user.id);
-
-        const [pRes, cRes, gRes, sRes, tRes] = await Promise.all([
-          progressPromise,
-          checklistPromise,
-          gradesPromise,
-          streakPromise,
-          testPromise
-        ]);
-
-        if (pRes.error) throw pRes.error;
-        if (cRes.error) throw cRes.error;
-        if (gRes.error) throw gRes.error;
-        if (sRes.error) throw sRes.error;
-        if (tRes.error) throw tRes.error;
-
-        setProgress(pRes.data || []);
-        setChecklist(cRes.data || []);
-        setGrades(gRes.data || []);
-        setStreaks(sRes.data || []);
-        setTestAttempts(tRes.data || []);
-      } catch (err) {
-        console.error('Error fetching trophies metrics:', err);
-        setErrorMsg(err.message || 'Failed to calculate trophy states.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAllData();
-  }, [user]);
+  const { 
+    loading, 
+    phaseState, 
+    checklistState, 
+    gradeState, 
+    streakDays, 
+    sqlSolved, 
+    examCount 
+  } = useProgress();
 
   if (loading) {
     return (
@@ -72,12 +26,21 @@ export function Trophies() {
     );
   }
 
-  const streakCount = calculateStreak(streaks);
+  // Construct lists for badge evaluator
+  const progressList = [
+    ...Object.entries(phaseState).map(([nodeId, status]) => ({ node_id: nodeId, status })),
+    ...sqlSolved.map(drillIdx => ({ node_id: `drill_${drillIdx}`, status: 'done' }))
+  ];
+  const checklistList = checklistState.map(itemId => ({ item_id: itemId, completed: true }));
+  const questionGradesList = Object.entries(gradeState).map(([qId, grade]) => ({ question_id: qId, grade }));
+  const testAttemptsList = Array(examCount).fill({ test_id: 'exam_mode' });
+
+  const streakCount = calculateStreak(streakDays.map(day => ({ activity_date: day })));
   const achievementStatus = evaluateAchievements({
-    progress,
-    checklistItems: checklist,
-    questionGrades: grades,
-    testAttempts,
+    progress: progressList,
+    checklistItems: checklistList,
+    questionGrades: questionGradesList,
+    testAttempts: testAttemptsList,
     streakCount
   });
   const unlockedCount = Object.values(achievementStatus).filter(Boolean).length;
@@ -87,27 +50,27 @@ export function Trophies() {
     switch (id) {
       case 'halfway':
         return {
-          cur: progress.filter(p => !p.node_id.startsWith('drill_') && p.status === 'done').length,
+          cur: Object.values(phaseState).filter(status => status === 'done').length,
           total: ROADMAP_NODES.length
         };
       case 'checklist-crusher':
         return {
-          cur: checklist.filter(c => c.completed).length,
+          cur: checklistState.length,
           total: MILESTONES.length
         };
       case 'query-whisperer':
         return {
-          cur: progress.filter(p => p.node_id.startsWith('drill_') && p.status === 'done').length,
+          cur: sqlSolved.length,
           total: 5
         };
       case 'sql-grandmaster':
         return {
-          cur: progress.filter(p => p.node_id.startsWith('drill_') && p.status === 'done').length,
+          cur: sqlSolved.length,
           total: SQL_DRILLS.length
         };
       case 'sharp-mind':
         return {
-          cur: grades.length,
+          cur: questionGradesList.length,
           total: 20
         };
       default:
@@ -139,12 +102,6 @@ export function Trophies() {
           <p>Locked achievements stay grayed out until you genuinely complete the requirements.</p>
         </div>
       </div>
-
-      {errorMsg && (
-        <div className="error-banner">
-          <p>{errorMsg}</p>
-        </div>
-      )}
 
       <div className="badges-summary">
         <div className="badges-count">

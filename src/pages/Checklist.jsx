@@ -1,101 +1,12 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { supabase, logActivity } from '../supabaseClient';
+import { useProgress } from '../context/ProgressContext';
 import { MILESTONES, BOOKS } from '../data/trackerData';
 
 export function Checklist() {
-  const { user } = useAuth();
-  
-  const [localChecked, setLocalChecked] = useState({});
-  const [pendingChanges, setPendingChanges] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [syncStatus, setSyncStatus] = useState('Synced');
+  const { loading, checklistState, toggleChecklistItem } = useProgress();
 
-  // 1. Fetch initial checklist state from Supabase
-  useEffect(() => {
-    if (!user) return;
-
-    const fetchChecklist = async () => {
-      setLoading(true);
-      setErrorMsg('');
-      try {
-        const { data, error } = await supabase
-          .from('checklist_items')
-          .select('item_id, completed')
-          .eq('user_id', user.id);
-
-        if (error) throw error;
-
-        const checkedMap = {};
-        data.forEach(item => {
-          checkedMap[item.item_id] = item.completed;
-        });
-        setLocalChecked(checkedMap);
-      } catch (err) {
-        console.error('Error fetching checklist:', err);
-        setErrorMsg(err.message || 'Failed to load checklist items.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchChecklist();
-  }, [user]);
-
-  // 2. Debounce and flush changes to Supabase in batches
-  useEffect(() => {
-    if (Object.keys(pendingChanges).length === 0) return;
-
-    setSyncStatus('Changes pending...');
-    const delayDebounce = setTimeout(async () => {
-      setSyncStatus('Saving...');
-      const changesToFlush = { ...pendingChanges };
-      setPendingChanges({});
-
-      try {
-        const upsertData = Object.entries(changesToFlush).map(([itemId, completed]) => ({
-          user_id: user.id,
-          item_id: itemId,
-          completed,
-          updated_at: new Date().toISOString(),
-        }));
-
-        const { error } = await supabase
-          .from('checklist_items')
-          .upsert(upsertData, { onConflict: 'user_id,item_id' });
-
-        if (error) throw error;
-
-        setSyncStatus('Synced');
-        await logActivity(user.id);
-      } catch (err) {
-        console.error('Failed to sync checklist changes:', err);
-        setSyncStatus('Error saving');
-        setErrorMsg('Failed to sync some milestones. They will be retried on next change.');
-        setPendingChanges(prev => ({
-          ...changesToFlush,
-          ...prev
-        }));
-      }
-    }, 1500);
-
-    return () => clearTimeout(delayDebounce);
-  }, [pendingChanges, user]);
-
-  const handleToggle = (idx) => {
+  const handleToggle = async (idx) => {
     const itemId = `milestone_${idx}`;
-    const nextVal = !localChecked[itemId];
-
-    setLocalChecked(prev => ({
-      ...prev,
-      [itemId]: nextVal
-    }));
-
-    setPendingChanges(prev => ({
-      ...prev,
-      [itemId]: nextVal
-    }));
+    await toggleChecklistItem(itemId);
   };
 
   if (loading) {
@@ -110,7 +21,7 @@ export function Checklist() {
     );
   }
 
-  const doneCount = MILESTONES.filter((_, idx) => localChecked[`milestone_${idx}`]).length;
+  const doneCount = MILESTONES.filter((_, idx) => checklistState.includes(`milestone_${idx}`)).length;
   const pct = Math.round((doneCount / MILESTONES.length) * 100);
 
   return (
@@ -120,16 +31,7 @@ export function Checklist() {
           <h1>Mastery Checklist</h1>
           <p>Self-assess your structural understanding of database engines. Be honest with yourself.</p>
         </div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: syncStatus === 'Synced' ? 'var(--good)' : 'var(--warn)' }}>
-          Sync: <strong>{syncStatus}</strong>
-        </div>
       </div>
-
-      {errorMsg && (
-        <div className="error-banner">
-          <p>{errorMsg}</p>
-        </div>
-      )}
 
       <div className="mastery-grid">
         {/* Left Side: Milestones List */}
@@ -142,7 +44,7 @@ export function Checklist() {
               <div className="progress-bar-lg">
                 <span style={{ width: `${pct}%` }}></span>
               </div>
-              <div className="streak-note" style={{ marginTop: '6px' }}>
+              <div className="streak-note" style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-dim)' }}>
                 {doneCount} of {MILESTONES.length} milestones done
               </div>
             </div>
@@ -151,7 +53,7 @@ export function Checklist() {
           <h3>Milestones</h3>
           <div id="checklist">
             {MILESTONES.map((milestone, idx) => {
-              const isChecked = !!localChecked[`milestone_${idx}`];
+              const isChecked = checklistState.includes(`milestone_${idx}`);
               return (
                 <div key={idx} className={`checklist-item ${isChecked ? 'checked' : ''}`}>
                   <input

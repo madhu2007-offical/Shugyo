@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ProgressProvider } from './context/ProgressContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
@@ -15,7 +16,8 @@ import { Trophies } from './pages/Trophies';
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <ProgressProvider>
+        <BrowserRouter>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
@@ -43,6 +45,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </ProgressProvider>
     </AuthProvider>
   );
 }

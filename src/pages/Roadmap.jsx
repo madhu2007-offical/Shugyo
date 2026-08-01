@@ -1,13 +1,9 @@
-import { useEffect, useState, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { supabase, logActivity } from '../supabaseClient';
+import { useState } from 'react';
+import { useProgress } from '../context/ProgressContext';
 import { ROADMAP_NODES } from '../data/trackerData';
 
 export function Roadmap() {
-  const { user } = useAuth();
-  
-  const [progress, setProgress] = useState({});
-  const [loading, setLoading] = useState(true);
+  const { loading, phaseState, updatePhaseState } = useProgress();
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   
   const [zoom, setZoom] = useState(1);
@@ -18,39 +14,9 @@ export function Roadmap() {
   const [errorMsg, setErrorMsg] = useState('');
   
   // Dragging state
-  const isDragging = useRef(false);
-  const dragStart = useRef({ x: 0, y: 0 });
-  const viewStart = useRef({ x: 0, y: 0 });
-
-  // 1. Fetch initial progress from Supabase
-  const fetchProgress = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('progress')
-        .select('node_id, status')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      const progressMap = {};
-      data.forEach(item => {
-        progressMap[item.node_id] = item.status;
-      });
-      setProgress(progressMap);
-    } catch (err) {
-      console.error('Error fetching progress:', err);
-      setErrorMsg('Failed to load roadmap progress from database.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchProgress();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  const [dragActive, setDragActive] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [viewStart, setViewStart] = useState({ x: 0, y: 0 });
 
   // Constants for coordinate mapping
   const NODE_W = 168;
@@ -71,26 +37,26 @@ export function Roadmap() {
   // Helper to determine unlocked state
   const isNodeUnlocked = (p) => {
     if (!p.deps || p.deps.length === 0) return true;
-    return p.deps.every(depId => progress[depId] === 'done');
+    return p.deps.every(depId => phaseState[depId] === 'done');
   };
 
   // Dragging event handlers
   const handleMouseDown = (e) => {
-    isDragging.current = true;
-    dragStart.current = { x: e.clientX, y: e.clientY };
-    viewStart.current = { x: panX, y: panY };
+    setDragActive(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+    setViewStart({ x: panX, y: panY });
   };
 
   const handleMouseMove = (e) => {
-    if (!isDragging.current) return;
-    const dx = e.clientX - dragStart.current.x;
-    const dy = e.clientY - dragStart.current.y;
-    setPanX(viewStart.current.x + dx);
-    setPanY(viewStart.current.y + dy);
+    if (!dragActive) return;
+    const dx = e.clientX - dragStart.x;
+    const dy = e.clientY - dragStart.y;
+    setPanX(viewStart.x + dx);
+    setPanY(viewStart.y + dy);
   };
 
   const handleMouseUp = () => {
-    isDragging.current = false;
+    setDragActive(false);
   };
 
   const handleWheel = (e) => {
@@ -112,26 +78,7 @@ export function Roadmap() {
     setUpdatingNode(nodeId);
     setErrorMsg('');
     try {
-      const { error } = await supabase
-        .from('progress')
-        .upsert({
-          user_id: user.id,
-          node_id: nodeId.toString(),
-          status: nextStatus,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,node_id'
-        });
-
-      if (error) throw error;
-
-      // Update state locally
-      setProgress(prev => ({
-        ...prev,
-        [nodeId]: nextStatus
-      }));
-
-      await logActivity(user.id);
+      await updatePhaseState(nodeId.toString(), nextStatus);
     } catch (err) {
       console.error('Error updating progress:', err);
       setErrorMsg(err.message || 'Failed to update database progress.');
@@ -153,13 +100,13 @@ export function Roadmap() {
   }
 
   // Determine current node (first unlocked-but-not-done node)
-  const candidates = ROADMAP_NODES.filter(p => progress[p.id] !== 'done' && isNodeUnlocked(p));
+  const candidates = ROADMAP_NODES.filter(p => phaseState[p.id] !== 'done' && isNodeUnlocked(p));
   candidates.sort((a, b) => (a.lane - b.lane) || (a.col - b.col));
   const currentId = candidates.length ? candidates[0].id : -1;
 
   // Selected node details
   const selectedNode = ROADMAP_NODES.find(p => p.id === selectedNodeId);
-  const doneCount = ROADMAP_NODES.filter(p => progress[p.id] === 'done').length;
+  const doneCount = ROADMAP_NODES.filter(p => phaseState[p.id] === 'done').length;
 
   return (
     <div className="fade-in" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
@@ -201,7 +148,7 @@ export function Roadmap() {
 
         {/* Canvas Area */}
         <div 
-          className="flow-canvas-outer"
+          className={`flow-canvas-outer ${dragActive ? 'grabbing' : ''}`}
           style={{ height: '380px' }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
@@ -251,7 +198,7 @@ export function Roadmap() {
                   const y2 = toXY.y + NODE_H / 2;
                   const midX = (x1 + x2) / 2;
                   
-                  const isDone = progress[depId] === 'done' && progress[p.id] === 'done';
+                  const isDone = phaseState[depId] === 'done' && phaseState[p.id] === 'done';
                   const pathClass = `fc-edge ${p.optional || from.optional ? 'optional-edge' : ''} ${isDone ? 'done' : ''}`;
                   const marker = isDone ? 'url(#arrowhead-good)' : 'url(#arrowhead)';
 
@@ -267,21 +214,21 @@ export function Roadmap() {
               })}
 
               {/* Start Flags */}
-              {!progress[0] && (
+              {!phaseState[0] && (
                 <g className="fc-flag start">
                   <rect 
                     className="flag-pill" 
-                    height={22} 
-                    rx={11} 
-                    width={100}
-                    x={30 + NODE_W / 2 - 50} 
-                    y={LANE0_Y - 42}
+                    height={20} 
+                    rx={10} 
+                    width={90}
+                    x={30 + NODE_W / 2 - 45} 
+                    y={LANE0_Y - 38}
                   />
                   <text 
                     className="flag-text" 
                     textAnchor="middle"
                     x={30 + NODE_W / 2} 
-                    y={LANE0_Y - 28}
+                    y={LANE0_Y - 25}
                   >
                     START HERE ↓
                   </text>
@@ -296,17 +243,17 @@ export function Roadmap() {
                   <g className="fc-flag here">
                     <rect 
                       className="flag-pill" 
-                      height={22} 
-                      rx={11} 
-                      width={120}
-                      x={x + NODE_W / 2 - 60} 
-                      y={y - 42}
+                      height={20} 
+                      rx={10} 
+                      width={110}
+                      x={x + NODE_W / 2 - 55} 
+                      y={y - 38}
                     />
                     <text 
                       className="flag-text" 
                       textAnchor="middle"
                       x={x + NODE_W / 2} 
-                      y={y - 28}
+                      y={y - 25}
                     >
                       ● YOU ARE HERE
                     </text>
@@ -317,7 +264,7 @@ export function Roadmap() {
               {/* Nodes */}
               {ROADMAP_NODES.map(p => {
                 const { x, y } = getNodeXY(p);
-                const status = progress[p.id] || 'locked';
+                const status = phaseState[p.id] || 'locked';
                 const isCurrent = p.id === currentId;
                 const done = status === 'done';
                 const isSelected = selectedNodeId === p.id;
@@ -335,7 +282,7 @@ export function Roadmap() {
                     onClick={() => setSelectedNodeId(selectedNodeId === p.id ? null : p.id)}
                   >
                     <circle className="fc-pulse" cx={x + NODE_W / 2} cy={y + NODE_H / 2} r={34} />
-                    <rect className="fc-box" x={x} y={y} width={NODE_W} height={NODE_H} rx={12} />
+                    <rect className="fc-box" x={x} y={y} width={NODE_W} height={NODE_H} rx={6} />
                     <text x={x + 14} y={y + 20} className="fc-code">{p.code}{p.optional ? ' · OPT' : ''}</text>
                     
                     {/* Render split title lines */}
@@ -391,7 +338,7 @@ export function Roadmap() {
                     const dep = ROADMAP_NODES.find(ph => ph.id === depId);
                     return (
                       <span key={depId} className="dep-chip">
-                        {progress[depId] === 'done' ? '✓' : '○'} {dep.code} {dep.name}
+                        {phaseState[depId] === 'done' ? '✓' : '○'} {dep.code} {dep.name}
                       </span>
                     );
                   })
@@ -402,11 +349,11 @@ export function Roadmap() {
               
               <div className="fd-actions">
                 <button 
-                  className={`fd-btn mark-done ${progress[selectedNode.id] === 'done' ? 'is-done' : ''} ${!isNodeUnlocked(selectedNode) && progress[selectedNode.id] !== 'done' ? 'locked' : ''}`}
-                  onClick={() => handleUpdateStatus(selectedNode.id, progress[selectedNode.id], !isNodeUnlocked(selectedNode))}
-                  disabled={!isNodeUnlocked(selectedNode) && progress[selectedNode.id] !== 'done'}
+                  className={`fd-btn mark-done ${phaseState[selectedNode.id] === 'done' ? 'is-done' : ''} ${!isNodeUnlocked(selectedNode) && phaseState[selectedNode.id] !== 'done' ? 'locked' : ''}`}
+                  onClick={() => handleUpdateStatus(selectedNode.id, phaseState[selectedNode.id], !isNodeUnlocked(selectedNode))}
+                  disabled={!isNodeUnlocked(selectedNode) && phaseState[selectedNode.id] !== 'done'}
                 >
-                  {progress[selectedNode.id] === 'done' ? '✓ Marked complete' : (isNodeUnlocked(selectedNode) ? 'Mark phase complete' : 'Locked — finish prerequisites first')}
+                  {phaseState[selectedNode.id] === 'done' ? '✓ Marked complete' : (isNodeUnlocked(selectedNode) ? 'Mark phase complete' : 'Locked — finish prerequisites first')}
                 </button>
               </div>
             </div>

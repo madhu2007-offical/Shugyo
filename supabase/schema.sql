@@ -1,128 +1,62 @@
--- 1. Profiles Table (Auto-created via trigger on auth.users signup)
-create table public.profiles (
-  id uuid references auth.users(id) on delete cascade primary key,
-  username text,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- 1. Enable UUID generation extension
+create extension if not exists "uuid-ossp";
+
+-- 2. The consolidated user progress table (Single Source of Truth)
+create table public.user_progress (
+  id              uuid primary key default uuid_generate_v4(),
+  user_id         uuid not null references auth.users(id) on delete cascade,
+  phase_state     jsonb not null default '{}'::jsonb,
+  checklist_state jsonb not null default '[]'::jsonb,
+  grade_state     jsonb not null default '{}'::jsonb,
+  streak_days     jsonb not null default '[]'::jsonb,
+  sql_solved      jsonb not null default '[]'::jsonb,
+  exam_count      integer not null default 0,
+  badges_earned   jsonb not null default '[]'::jsonb,
+  updated_at      timestamptz not null default now(),
+  unique(user_id)
 );
 
--- Enable RLS on Profiles
-alter table public.profiles enable row level security;
+-- 3. Auto-update the updated_at timestamp on every write
+create or replace function public.set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
 
-create policy "Users can view and update their own profile"
-  on public.profiles
-  for all
-  using (auth.uid() = id)
-  with check (auth.uid() = id);
+create trigger trg_user_progress_updated
+before update on public.user_progress
+for each row execute function public.set_updated_at();
 
--- Trigger to auto-create profile on signup
+-- 4. Auto-create a progress row the instant someone signs up
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, username)
-  values (new.id, split_part(new.email, '@', 1));
+  insert into public.user_progress (user_id)
+  values (new.id);
   return new;
 end;
 $$ language plpgsql security definer;
 
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
+create trigger trg_on_auth_user_created
+after insert on auth.users
+for each row execute function public.handle_new_user();
 
+-- 5. Row Level Security (RLS) Policies
+alter table public.user_progress enable row level security;
 
--- 2. Progress Table (Tracks roadmap phases P0-P8 and SQL Drills drill_0 to drill_13)
-create table public.progress (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users(id) on delete cascade not null,
-  node_id text not null,
-  status text not null check (status in ('locked', 'in_progress', 'done')),
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  constraint unique_user_node unique (user_id, node_id)
-);
+-- Users can only ever see their own row
+create policy "select_own_progress"
+on public.user_progress for select
+using (auth.uid() = user_id);
 
--- Enable RLS
-alter table public.progress enable row level security;
+-- Users can only ever update their own row
+create policy "update_own_progress"
+on public.user_progress for update
+using (auth.uid() = user_id);
 
-create policy "Users can manage their own progress"
-  on public.progress
-  for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
-
-
--- 3. Checklist Items Table (Tracks milestones 0-9)
-create table public.checklist_items (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users(id) on delete cascade not null,
-  item_id text not null,
-  completed boolean default false not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  constraint unique_user_item unique (user_id, item_id)
-);
-
--- Enable RLS
-alter table public.checklist_items enable row level security;
-
-create policy "Users can manage their own checklist items"
-  on public.checklist_items
-  for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
-
-
--- 4. Test Attempts Table (Tracks exam completions)
-create table public.test_attempts (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users(id) on delete cascade not null,
-  test_id text not null,
-  score integer not null,
-  total_questions integer not null,
-  attempted_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- Enable RLS
-alter table public.test_attempts enable row level security;
-
-create policy "Users can manage their own test attempts"
-  on public.test_attempts
-  for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
-
-
--- 5. Streaks Table (Tracks active learning days)
-create table public.streaks (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users(id) on delete cascade not null,
-  activity_date date default current_date not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  constraint unique_user_date unique (user_id, activity_date)
-);
-
--- Enable RLS
-alter table public.streaks enable row level security;
-
-create policy "Users can manage their own streaks"
-  on public.streaks
-  for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
-
-
--- 6. Question Grades Table (Tracks self-graded questions in the Test Bank)
-create table public.question_grades (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users(id) on delete cascade not null,
-  question_id integer not null,
-  grade text not null check (grade in ('good', 'bad')),
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  constraint unique_user_question unique (user_id, question_id)
-);
-
--- Enable RLS
-alter table public.question_grades enable row level security;
-
-create policy "Users can manage their own question grades"
-  on public.question_grades
-  for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+-- Users can only insert a row tied to themselves
+create policy "insert_own_progress"
+on public.user_progress for insert
+with check (auth.uid() = user_id);
