@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useProgress } from '../context/ProgressContext';
 import { calculateStreak } from '../utils/streakCalculator';
 import { evaluateAchievements } from '../utils/trophyEvaluator';
@@ -32,73 +32,7 @@ function useCountUp(endVal, duration = 800) {
   return count;
 }
 
-function ParticleCanvas() {
-  useEffect(() => {
-    const canvas = document.getElementById('hero-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let animationFrameId;
-    
-    const parent = canvas.parentElement;
-    if (!parent) return;
-    const resize = () => {
-      canvas.width = parent.offsetWidth;
-      canvas.height = parent.offsetHeight;
-    };
-    resize();
-    window.addEventListener('resize', resize);
-    
-    const particles = [];
-    for(let i=0; i<35; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.35,
-        vy: (Math.random() - 0.5) * 0.35,
-        r: Math.random() * 2 + 1
-      });
-    }
-    
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = 'rgba(99, 102, 241, 0.15)';
-      ctx.strokeStyle = 'rgba(99, 102, 241, 0.03)';
-      
-      particles.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
-        
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
-      });
-      
-      for(let i=0; i<particles.length; i++) {
-        for(let j=i+1; j<particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx*dx + dy*dy);
-          if (dist < 100) {
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.stroke();
-          }
-        }
-      }
-      animationFrameId = requestAnimationFrame(draw);
-    };
-    draw();
-    
-    return () => {
-      window.removeEventListener('resize', resize);
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []);
-  return <canvas id="hero-canvas" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }} />;
-}
+
 
 export function Dashboard() {
   const { 
@@ -115,16 +49,7 @@ export function Dashboard() {
   const [quoteIdx, setQuoteIdx] = useState(0);
   const [pressureIdx, setPressureIdx] = useState(0);
 
-  const heroRef = useRef(null);
 
-  const handleMouseMove = (e) => {
-    if (!heroRef.current) return;
-    const rect = heroRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    heroRef.current.style.setProperty('--mouse-x', `${x}px`);
-    heroRef.current.style.setProperty('--mouse-y', `${y}px`);
-  };
 
   useEffect(() => {
     const qTimer = setInterval(() => {
@@ -299,22 +224,19 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Hero section with cursor glow, particle flow, and staggered fades */}
+      {/* Hero section with clean, static dark gradient mesh */}
       <section 
         className="hero" 
-        ref={heroRef}
-        onMouseMove={handleMouseMove}
         style={{ 
           padding: '2.5rem', 
           borderRadius: 'var(--radius)', 
-          background: 'radial-gradient(circle 420px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(99, 102, 241, 0.08), transparent 75%), var(--surface)', 
+          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.04) 0%, var(--surface) 100%)', 
           border: '1px solid var(--border)',
           position: 'relative',
           overflow: 'hidden',
           marginBottom: '2.5rem'
         }}
       >
-        <ParticleCanvas />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div className="eyebrow">
             <span className="dot"></span> PERSONAL CONSOLE · BASIC → ADVANCED
@@ -332,13 +254,9 @@ export function Dashboard() {
             <div className="quote-author">— {QUOTES[quoteIdx].author}</div>
           </div>
 
-          {/* 3. Animated Hero SVG Diagram (Additive query scanning B+ Tree details) */}
+          {/* 3. Animated Hero SVG Diagram (Static query scanning B+ Tree details) */}
           <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center' }}>
             <svg width="460" height="90" viewBox="0 0 460 90" style={{ background: 'rgba(9, 11, 15, 0.6)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px' }}>
-              <circle cx="80" cy="80" r="1.5" fill="var(--accent)" className="drifting-particle" style={{ animationDelay: '0s' }} />
-              <circle cx="210" cy="80" r="1" fill="var(--good)" className="drifting-particle" style={{ animationDelay: '0.8s' }} />
-              <circle cx="340" cy="80" r="1.5" fill="var(--accent)" className="drifting-particle" style={{ animationDelay: '1.6s' }} />
-              
               <g className="fade-scale-node" style={{ animationDelay: '0.2s' }}>
                 <rect x="15" y="25" width="80" height="36" rx="4" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1" />
                 <text x="55" y="47" textAnchor="middle" fill="var(--text)" fontSize="8.5" fontFamily="var(--font-mono)">SELECT *</text>
