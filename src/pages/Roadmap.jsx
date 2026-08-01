@@ -15,34 +15,30 @@ const getPhaseDiagram = (code) => {
   };
   
   switch(code) {
-    case 'P0': // Foundations
+    case 'P0':
       return (
         <svg style={styles} viewBox="0 0 100 80">
           <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">B-TREE INDEX</text>
           <rect x="38" y="20" width="24" height="12" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="1"/>
           <circle cx="50" cy="26" r="2" fill="var(--accent)" />
-          
           <line x1="50" y1="32" x2="25" y2="52" stroke="var(--border)" strokeWidth="1" strokeDasharray="2,2"/>
           <line x1="50" y1="32" x2="75" y2="52" stroke="var(--border)" strokeWidth="1" strokeDasharray="2,2"/>
-          
           <rect x="13" y="52" width="24" height="12" rx="2" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
           <rect x="63" y="52" width="24" height="12" rx="2" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
         </svg>
       );
-    case 'P1': // Relational Theory
+    case 'P1':
       return (
         <svg style={styles} viewBox="0 0 100 80">
           <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">JOIN ALGEBRA</text>
           <rect x="10" y="22" width="30" height="36" rx="3" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
           <rect x="10" y="22" width="30" height="10" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="1"/>
-          
           <rect x="60" y="32" width="30" height="26" rx="3" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
           <rect x="60" y="32" width="30" height="10" rx="3" fill="var(--good-soft)" stroke="var(--good)" strokeWidth="1"/>
-          
           <path d="M 40 40 Q 50 35, 60 45" stroke="var(--warn)" strokeWidth="1.2" fill="none"/>
         </svg>
       );
-    case 'P2': // Storage & Indexing
+    case 'P2':
       return (
         <svg style={styles} viewBox="0 0 100 80">
           <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">DISK SEGMENTATION</text>
@@ -54,21 +50,19 @@ const getPhaseDiagram = (code) => {
           <rect x="22" y="40" width="22" height="8" rx="1" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="0.8"/>
         </svg>
       );
-    case 'P3': // Query Execution
+    case 'P3':
       return (
         <svg style={styles} viewBox="0 0 100 80">
           <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">EXECUTION TREE</text>
           <circle cx="50" cy="24" r="8" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="1"/>
           <text x="50" y="25" textAnchor="middle" dominantBaseline="middle" fill="var(--text)" fontSize="7">⚙</text>
-          
           <line x1="50" y1="32" x2="30" y2="54" stroke="var(--border)" strokeWidth="1"/>
           <line x1="50" y1="32" x2="70" y2="54" stroke="var(--border)" strokeWidth="1"/>
-          
           <circle cx="30" cy="54" r="8" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
           <circle cx="70" cy="54" r="8" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
         </svg>
       );
-    case 'P4': // Buffer Pools
+    case 'P4':
       return (
         <svg style={styles} viewBox="0 0 100 80">
           <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">LRU CACHE PAGE</text>
@@ -80,7 +74,7 @@ const getPhaseDiagram = (code) => {
           <rect x="67" y="48" width="18" height="18" rx="2" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
         </svg>
       );
-    case 'P5': // Concurrency Control
+    case 'P5':
       return (
         <svg style={styles} viewBox="0 0 100 80">
           <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">2PL LOCK TABLE</text>
@@ -91,40 +85,36 @@ const getPhaseDiagram = (code) => {
           <line x1="44" y1="32" x2="56" y2="32" stroke="var(--border)" strokeWidth="1"/>
         </svg>
       );
-    case 'P6': // Crash Recovery
+    case 'P6':
       return (
         <svg style={styles} viewBox="0 0 100 80">
           <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">WAL SYSTEM LOG</text>
           <rect x="10" y="22" width="80" height="14" rx="2" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
           <text x="50" y="29" textAnchor="middle" dominantBaseline="middle" fill="var(--text-dim)" fontSize="7">LSN #3202 | TXN_START</text>
-          
           <rect x="10" y="44" width="80" height="14" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="1"/>
           <text x="50" y="51" textAnchor="middle" dominantBaseline="middle" fill="var(--text)" fontSize="7">LSN #3203 | COMMIT</text>
         </svg>
       );
-    case 'P7': // Distributed Databases
+    case 'P7':
       return (
         <svg style={styles} viewBox="0 0 100 80">
           <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">REPLICAS NETWORK</text>
           <circle cx="50" cy="22" r="6" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="1"/>
           <circle cx="25" cy="52" r="6" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
           <circle cx="75" cy="52" r="6" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
-          
           <line x1="44" y1="25" x2="29" y2="48" stroke="var(--border)" strokeWidth="1"/>
           <line x1="56" y1="25" x2="71" y2="48" stroke="var(--border)" strokeWidth="1"/>
           <line x1="31" y1="52" x2="69" y2="52" stroke="var(--border)" strokeWidth="1" strokeDasharray="1,1"/>
         </svg>
       );
-    case 'P8': // System Design Capstone
+    case 'P8':
       return (
         <svg style={styles} viewBox="0 0 100 80">
           <text x="50%" y="12" dominantBaseline="middle" textAnchor="middle" fill="var(--text-faint)" fontSize="7" fontFamily="var(--font-mono)">CLUSTER MAP</text>
           <rect x="15" y="22" width="70" height="14" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="1"/>
           <text x="50" y="29" textAnchor="middle" dominantBaseline="middle" fill="var(--text)" fontSize="7">HAProxy Load Balancer</text>
-          
           <rect x="10" y="48" width="36" height="18" rx="2" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
           <text x="28" y="57" textAnchor="middle" dominantBaseline="middle" fill="var(--text-dim)" fontSize="6">Primary DB</text>
-          
           <rect x="54" y="48" width="36" height="18" rx="2" fill="var(--surface-3)" stroke="var(--border)" strokeWidth="1"/>
           <text x="72" y="57" textAnchor="middle" dominantBaseline="middle" fill="var(--text-dim)" fontSize="6">Read Replica</text>
         </svg>
@@ -154,11 +144,11 @@ export function Roadmap() {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [viewStart, setViewStart] = useState({ x: 0, y: 0 });
 
-  // Constants for coordinate mapping
-  const NODE_W = 168;
-  const NODE_H = 88;
+  // Constants for compact pill coordinate mapping
+  const NODE_W = 190;
+  const NODE_H = 64;
   const COL_GAP = 96;
-  const ROW_GAP = 130;
+  const ROW_GAP = 120;
   const LANE0_Y = 96;
   const LANE1_Y = LANE0_Y + ROW_GAP;
   const CANVAS_W = 6 * (NODE_W + COL_GAP) + NODE_W + 60;
@@ -318,12 +308,14 @@ export function Roadmap() {
             {/* Group wrapper for pan & zoom */}
             <g transform={`translate(${panX}, ${panY}) scale(${zoom})`}>
               
-              {/* Edges/Paths connected column-by-column left-to-right delay */}
+              {/* Connection links */}
               {ROADMAP_NODES.map(p => {
                 return p.deps.map(depId => {
                   const from = ROADMAP_NODES.find(ph => ph.id === depId);
                   const fromXY = getNodeXY(from);
                   const toXY = getNodeXY(p);
+                  
+                  // Connection points
                   const x1 = fromXY.x + NODE_W;
                   const y1 = fromXY.y + NODE_H / 2;
                   const x2 = toXY.x;
@@ -335,13 +327,22 @@ export function Roadmap() {
                   const marker = isDone ? 'url(#arrowhead-good)' : 'url(#arrowhead)';
 
                   return (
-                    <path
-                      key={`edge-${depId}-${p.id}`}
-                      d={`M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`}
-                      className={pathClass}
-                      markerEnd={marker}
-                      style={{ animationDelay: `${from.col * 0.3}s` }}
-                    />
+                    <g key={`link-${depId}-${p.id}`}>
+                      {/* Background link line */}
+                      <path
+                        d={`M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`}
+                        className={pathClass}
+                        markerEnd={marker}
+                        style={{ animationDelay: `${from.col * 0.3}s` }}
+                      />
+                      {/* Glowing data flow telemetry path */}
+                      {isDone && (
+                        <path
+                          d={`M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`}
+                          className="data-flow-path"
+                        />
+                      )}
+                    </g>
                   );
                 });
               })}
@@ -394,7 +395,7 @@ export function Roadmap() {
                 );
               })()}
 
-              {/* Nodes with scale staggered animations */}
+              {/* Pill shaped node milestones */}
               {ROADMAP_NODES.map(p => {
                 const { x, y } = getNodeXY(p);
                 const status = phaseState[p.id] || 'locked';
@@ -419,10 +420,19 @@ export function Roadmap() {
                       opacity: 0 
                     }}
                   >
-                    <circle className="fc-pulse" cx={x + NODE_W / 2} cy={y + NODE_H / 2} r={34} />
-                    <rect className="fc-box" x={x} y={y} width={NODE_W} height={NODE_H} rx={6} />
-                    <text x={x + 14} y={y + 20} className="fc-code">{p.code}{p.optional ? ' · OPT' : ''}</text>
+                    {/* Glowing highlight pulse */}
+                    {isCurrent && <circle className="fc-pulse" cx={x + NODE_W / 2} cy={y + NODE_H / 2} r={34} />}
                     
+                    {/* Node Capsule */}
+                    <rect className="fc-box" x={x} y={y} width={NODE_W} height={NODE_H} rx={12} />
+                    
+                    {/* Left side circle badge */}
+                    <rect className="fc-badge-bg" x={x + 12} y={y + 12} width={40} height={40} rx={8} />
+                    <text x={x + 32} y={y + 36} className="fc-code" textAnchor="middle" dominantBaseline="middle">
+                      {p.code}
+                    </text>
+
+                    {/* Node Titles */}
                     {p.name.split(' ').map((word, wIdx, words) => {
                       const mid = Math.ceil(words.length / 2);
                       const line1 = words.slice(0, mid).join(' ');
@@ -431,18 +441,26 @@ export function Roadmap() {
                       return (
                         <text 
                           key={wIdx} 
-                          x={x + 14} 
-                          y={y + 40 + (wIdx === 0 ? 0 : 16)} 
+                          x={x + 64} 
+                          y={y + 28 + (wIdx === 0 ? 0 : 14)} 
                           className="fc-title"
+                          dominantBaseline="middle"
                         >
                           {wIdx === 0 ? line1 : line2}
                         </text>
                       );
                     })}
 
-                    <text x={x + 14} y={y + NODE_H - 12} className="fc-time" fill="var(--text-faint)">{p.time}</text>
-                    <text x={x + NODE_W - 22} y={y + 20} className="fc-check" fill="var(--good)" fontSize="13">✓</text>
-                    <text x={x + NODE_W - 12} y={y + 20} className="fc-badge-current" fill="var(--accent)" fontSize="12" textAnchor="end">●</text>
+                    {/* Status Checkmark / Lock icon triggers */}
+                    {done ? (
+                      <text x={x + NODE_W - 20} y={y + 36} fill="var(--good)" fontSize="13" textAnchor="middle" dominantBaseline="middle">✓</text>
+                    ) : (
+                      !isNodeUnlocked(p) ? (
+                        <text x={x + NODE_W - 20} y={y + 36} fill="var(--text-faint)" fontSize="11" textAnchor="middle" dominantBaseline="middle">🔒</text>
+                      ) : (
+                        <text x={x + NODE_W - 20} y={y + 36} fill="var(--accent)" fontSize="11" textAnchor="middle" dominantBaseline="middle">●</text>
+                      )
+                    )}
                   </g>
                 );
               })}
@@ -452,12 +470,12 @@ export function Roadmap() {
 
         <div className="flow-hint">Pinch or scroll to zoom · Click-drag to pan · Click any node for details</div>
         
-        {/* Detail drawer (with illustrative diagrams) */}
+        {/* Detail drawer */}
         <div className={`flow-detail ${selectedNode ? 'open' : ''}`}>
           {selectedNode && (
             <div className="flow-detail-inner" style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
               
-              {/* Illustrative Diagram block */}
+              {/* Illustrative Diagram */}
               {getPhaseDiagram(selectedNode.code)}
 
               <div style={{ flexGrow: 1 }}>

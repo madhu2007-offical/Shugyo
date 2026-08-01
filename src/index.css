@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  /* Ultra-Premium Minimalist Palette (Linear/Vercel style) */
+  /* Ultra-Premium Minimalist Palette */
   --bg: #07080a;
   --surface: #0e1117;
   --surface-2: #141822;
@@ -13,7 +13,6 @@
   --text-dim: #9ca3af;
   --text-faint: #4b5563;
   
-  /* deliberate clean accents */
   --accent: #6366f1;           /* Royal Indigo */
   --accent-soft: rgba(99, 102, 241, 0.08);
   --accent-line: rgba(99, 102, 241, 0.25);
@@ -53,19 +52,20 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Scroll Progress Bar at very top of screen */
-.scroll-progress-bar {
+/* Scroll Progress Bar */
+#motion-scroll-bar {
   position: fixed;
   top: 0;
   left: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--accent), var(--good));
-  z-index: 9999;
+  height: 2.5px;
+  background: linear-gradient(90deg, #6366f1 0%, #10b981 100%);
+  z-index: 99999;
   width: 0%;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+  pointer-events: none;
   transition: width 0.1s ease-out;
 }
 
-/* Subtle accent background light source with parallax capability */
 body::before {
   content: '';
   position: fixed;
@@ -80,7 +80,7 @@ body::before {
   transition: transform 0.1s ease-out;
 }
 
-/* Sidebar layout */
+/* App shell layout */
 .app-layout {
   display: flex;
   min-height: 100vh;
@@ -220,7 +220,7 @@ body::before {
   margin-top: 0.35rem;
 }
 
-/* Scroll-Driven Animations: Entrance Slide-In */
+/* Scroll-reveals */
 .scroll-reveal {
   opacity: 0;
   transform: translateY(20px);
@@ -232,7 +232,7 @@ body::before {
   transform: translateY(0);
 }
 
-/* Clean Cards & Panels with Hover Lift */
+/* Cards & Panels */
 .panel {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -303,7 +303,7 @@ body::before {
   margin-top: 2px;
 }
 
-/* LeetCode stats display (Minimalist style) */
+/* LeetCode panel stats */
 .lc-progress-panel {
   display: flex;
   align-items: center;
@@ -384,7 +384,7 @@ body::before {
 .lc-bar-fill.medium { background: var(--warn); }
 .lc-bar-fill.hard { background: var(--danger); }
 
-/* Daily challenge card (Subtle indigo gradient accent) */
+/* Daily challenge details */
 .daily-challenge-box {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -435,7 +435,7 @@ body::before {
   line-height: 1.6;
 }
 
-/* Submission Heatmap Grid (Subtle green blocks) */
+/* Consistency Streak Heatmap */
 .streak-grid {
   display: grid;
   grid-template-columns: 1fr 2fr;
@@ -547,7 +547,7 @@ body::before {
   margin-top: 4px;
 }
 
-/* Clean Forms & Inputs */
+/* Forms inputs */
 .auth-container {
   display: flex;
   justify-content: center;
@@ -609,7 +609,7 @@ body::before {
   border-color: var(--accent-line);
 }
 
-/* Clean buttons with press/hover animations */
+/* Button micro-interactions */
 .btn {
   font-family: var(--font-body);
   font-size: 13px;
@@ -645,6 +645,10 @@ body::before {
   background: transparent;
 }
 
+.nav-item:active {
+  transform: scale(0.96);
+}
+
 .btn-secondary:hover {
   color: var(--text);
   background: rgba(255, 255, 255, 0.02);
@@ -659,7 +663,7 @@ body::before {
   width: 100%;
 }
 
-/* Tech Tree Roadmap (Clean rectangular nodes) */
+/* REDESIGNED ROADMAP FLOWCHART: Sleek capsule node milestones + data-flow networks */
 .flow-wrap {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -703,49 +707,102 @@ body::before {
   position: relative;
 }
 
+/* Data-flow animation overlay paths */
+.data-flow-path {
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  fill: none;
+  stroke-dasharray: 8, 12;
+  animation: data-stream 3s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes data-stream {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.fc-node {
+  cursor: pointer;
+}
+
 .fc-node .fc-box {
   fill: var(--surface-2);
   stroke: var(--border);
-  stroke-width: 1.5;
-  rx: 6px;
+  stroke-width: 1.2;
+  rx: 12px; /* Pill shaped */
   transition: stroke var(--transition-normal), fill var(--transition-normal);
+}
+
+.fc-node:hover .fc-box {
+  fill: var(--surface-3);
+  stroke: var(--text-dim);
 }
 
 .fc-node.done .fc-box {
   stroke: var(--good);
+  fill: rgba(16, 185, 129, 0.02);
 }
 
 .fc-node.current .fc-box {
   stroke: var(--accent);
+  fill: rgba(99, 102, 241, 0.02);
 }
 
 .fc-node.selected .fc-box {
   stroke: var(--text);
   stroke-width: 2;
-  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.25));
+  filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.2));
+}
+
+.fc-node .fc-badge-bg {
+  fill: var(--surface-3);
+  stroke: var(--border);
+  stroke-width: 1;
+  rx: 6px;
+}
+
+.fc-node.done .fc-badge-bg {
+  fill: var(--good-soft);
+  stroke: var(--good);
+}
+
+.fc-node.current .fc-badge-bg {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
 }
 
 .fc-node .fc-code {
-  fill: var(--text-faint);
-  font-size: 9.5px;
+  fill: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.fc-node.done .fc-code {
+  fill: var(--good);
+}
+
+.fc-node.current .fc-code {
+  fill: var(--accent);
 }
 
 .fc-node .fc-title {
   fill: var(--text);
   font-family: var(--font-display);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 500;
 }
 
 .fc-node .fc-time {
-  fill: var(--text-dim);
+  fill: var(--text-faint);
   font-size: 9px;
 }
 
-/* Roadmap self-drawing path line animations */
 .fc-edge {
   stroke: var(--border);
-  stroke-width: 1.5;
+  stroke-width: 1.2;
   fill: none;
   stroke-dasharray: 1000;
   stroke-dashoffset: 1000;
@@ -753,7 +810,7 @@ body::before {
 }
 
 .fc-edge.done {
-  stroke: var(--good);
+  stroke: rgba(16, 185, 129, 0.3);
 }
 
 @keyframes draw-path {
@@ -796,7 +853,7 @@ body::before {
   font-weight: 600;
 }
 
-/* Resources block list */
+/* Resources list phase blocks */
 .phase-block {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -847,7 +904,7 @@ body::before {
   border-color: var(--border-hover);
 }
 
-/* SQL Practice Drills interface */
+/* SQL Practice compiler */
 .sql-schema {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -879,7 +936,7 @@ body::before {
   padding: 14px;
 }
 
-/* Test Bank layouts */
+/* Test bank quizzes cards */
 .qcard {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -906,7 +963,7 @@ body::before {
 .difftag.hard { background: var(--danger-soft); color: var(--danger); }
 .difftag.advanced { background: var(--danger-soft); color: var(--danger); }
 
-/* Badge showcase */
+/* Badge trophies */
 .badge-card {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -938,7 +995,7 @@ body::before {
   color: var(--text-dim);
 }
 
-/* Responsive elements */
+/* Responsive sidebar */
 @media (max-width: 1024px) {
   .sidebar {
     width: 68px;
@@ -948,7 +1005,6 @@ body::before {
   .main-content { margin-left: 68px; padding: 2rem; }
 }
 
-/* Staggered transition delays for elements when in viewport */
 .stagger-item-1 { transition-delay: 0.05s; }
 .stagger-item-2 { transition-delay: 0.1s; }
 .stagger-item-3 { transition-delay: 0.15s; }
